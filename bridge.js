@@ -8,7 +8,7 @@ require('dotenv').config({
 
 const lastPublishTime = {};
 const lastData = {};
-const DEBOUNCE_MS = 2000;
+const DEBOUNCE_MS = 3000;
 
 
 // MQTT Client
@@ -65,7 +65,7 @@ socket.on(process.env.SOCKET_IO_EVENT, (data) => {
     const topic = `${process.env.MQTT_TOPIC_BASE}/${deviceKey}/state`;
     console.log((new Date()).toISOString(), 'Publish to MQTT topic:', topic);
     // Publish to MQTT
-    mqttClient.publish(topic, JSON.stringify(data), { qos: 1, retain: true }, (err) => {
+    mqttClient.publish(topic, JSON.stringify(lastData[deviceKey]), { qos: 1, retain: true }, (err) => {
         if (err) console.error('Publish error:', err);
         else console.log(`Published full JSON to ${topic}`);
     });
