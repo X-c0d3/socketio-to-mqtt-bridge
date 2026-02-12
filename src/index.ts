@@ -51,7 +51,7 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
   const lastTime = lastPublishTime[deviceKey] || 0;
 
   if (deviceKey === 'Huawei_SUN2000_10K_LC0') {
-    var testlaMate = await getTeslaMateInfo();
+    var teslaMate = await getTeslaMateInfo();
     var wallCharge = await getWallConnector<TeslaWallConnectorVitals>('vitals');
     // var wifi_status = await getWallConnector<TeslaWallConnectorWifiStatus>('wifi_status');
     // var lifetime = await getWallConnector<TeslaWallConnectorLifetimeStats>('lifetime');
@@ -65,7 +65,7 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
       ...data,
       tesla: {
         wallCharge,
-        testlaMate,
+        teslaMate,
         // wifi_status,
         // lifetime,
         //deviceInfo,
