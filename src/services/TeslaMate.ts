@@ -1,0 +1,111 @@
+import axios from 'axios';
+import { AppConfig } from '../constants/Constants';
+import { JSDOM } from 'jsdom';
+import { createEmptyTeslaMate, TeslaMateResponse } from '../types/TeslaMateResponse';
+
+function getRowValue(document: Document, label: string): { value: string; tooltip: string } {
+  const rows = document.querySelectorAll('tbody tr');
+
+  for (const row of rows) {
+    const labelTd = row.querySelector('td.has-text-weight-medium');
+    if (!labelTd) continue;
+
+    if (labelTd.textContent?.trim() === label) {
+      const valueTd = labelTd.nextElementSibling as HTMLElement | null;
+      if (!valueTd) return { value: '', tooltip: '' };
+
+      const tooltip = valueTd.querySelector('[data-tooltip]')?.getAttribute('data-tooltip') ?? '';
+
+      return {
+        value: valueTd.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+        tooltip: tooltip.replace(/\s+/g, ' ').trim(),
+      };
+    }
+  }
+
+  return { value: '', tooltip: '' };
+}
+
+function parseLocation(document: Document): { lat?: number; lng?: number } {
+  const input = document.querySelector('input[id^="position_"]') as HTMLInputElement | null;
+  if (!input?.value) return {};
+
+  const [lat, lng] = input.value.split(',').map(Number);
+
+  return {
+    lat: isFinite(lat) ? lat : undefined,
+    lng: isFinite(lng) ? lng : undefined,
+  };
+}
+
+function parseTeslaMateHtml(dom: any): TeslaMateResponse {
+  const document = dom.window.document;
+
+  const tesla = createEmptyTeslaMate();
+
+  let r;
+
+  // Status
+  r = getRowValue(document, 'Status');
+  tesla.status = r.value;
+
+  // Range (rated)
+  r = getRowValue(document, 'Range (rated)');
+  tesla.range_rated = parseFloat(r.value.replace('km', '')) || 0;
+
+  // Range (est.)
+  r = getRowValue(document, 'Range (est.)');
+  tesla.range_estimated = parseFloat(r.value.replace('km', '')) || 0;
+
+  // SOC + tooltip
+  r = getRowValue(document, 'State of Charge');
+  tesla.soc = parseInt(r.value.replace('%', ''), 10) || 0;
+  tesla.estimated_range_100 = r.tooltip;
+
+  // Outside temp
+  r = getRowValue(document, 'Outside Temperature');
+  tesla.temp_outside = parseFloat(r.value.replace('°C', '')) || 0;
+
+  // Inside temp
+  r = getRowValue(document, 'Inside Temperature');
+  tesla.temp_inside = parseFloat(r.value.replace('°C', '')) || 0;
+
+  // Mileage
+  r = getRowValue(document, 'Mileage');
+  tesla.mileage = parseInt(r.value.replace(/km|,/g, ''), 10) || -1;
+
+  // Speed
+  r = getRowValue(document, 'Speed');
+  tesla.speed = r.value ? parseFloat(r.value.replace(/[^0-9.]/g, '')) : -1;
+
+  // Version (อยู่ใน <a>)
+  const versionLink = document.querySelector('a[href*="software-updates/version"]');
+  if (versionLink) {
+    tesla.version = versionLink.textContent?.trim() ?? '';
+  }
+
+  const loc = parseLocation(document);
+  tesla.lat = loc.lat;
+  tesla.lng = loc.lng;
+
+  return tesla;
+}
+
+const getTeslaMateInfo = async (): Promise<TeslaMateResponse | null> => {
+  try {
+    const res = await axios.get(`${AppConfig.TESLAMATE_URL}`, {
+      timeout: 5000,
+      headers: {
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+      },
+    });
+
+    const dom = new JSDOM(res.data);
+    return parseTeslaMateHtml(dom);
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+};
+
+export { getTeslaMateInfo };
