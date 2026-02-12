@@ -1,5 +1,5 @@
 {
-  "name": "socketio-to-mqtt-bridge",
+  "name": "mqtt-bridge",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",

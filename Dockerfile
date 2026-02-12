@@ -2,13 +2,13 @@ FROM node:20-alpine
 ENV NODE_ENV production
 
 WORKDIR /usr/src/app
-COPY . .
 
-# Enable SSL cert
-RUN apk add openssl busybox-extras curl
+RUN apk add openssl busybox-extras curl vim
 
-RUN cd /usr/src/app
-
+COPY package*.json ./
 RUN npm install
+
+COPY . .
+RUN npm run build
 
 CMD ["node", "dist/src/index.js"]
