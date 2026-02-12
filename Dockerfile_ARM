@@ -1,4 +1,4 @@
-FROM arm64v8/node:17-bullseye
+FROM arm64v8/node:20-bullseye
 ENV NODE_ENV production
 
 WORKDIR /usr/src/app
@@ -14,11 +14,10 @@ RUN apt-get update && apt-get install -y \
 ENV PATH /usr/src/app/node_modules/.bin:$PATH
 
 COPY [".env", "/usr/src/app"]
-COPY ["bridge.js", "/usr/src/app"]
 COPY . .
 
 RUN cd /usr/src/app
 
 RUN npm install
 
-CMD [ "node", "bridge.js" ]
+CMD ["node", "dist/src/index.js"]

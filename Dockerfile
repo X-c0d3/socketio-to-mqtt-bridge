@@ -1,9 +1,9 @@
-FROM node:18.2.0-alpine
+FROM node:20-alpine
 ENV NODE_ENV production
 
 WORKDIR /usr/src/app
 COPY [".env", "/usr/src/app"]
-COPY ["bridge.js", "/usr/src/app"]
+# COPY ["bridge.js", "/usr/src/app"]
 COPY . .
 
 # Enable SSL cert
