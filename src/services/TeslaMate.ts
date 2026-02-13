@@ -117,6 +117,20 @@ function parseTeslaMateHtml(dom: any): TeslaMateResponse {
   tesla.lat = loc.lat;
   tesla.lng = loc.lng;
 
+  const now = new Date();
+  tesla.lastUpdate = now
+    .toLocaleString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      timeZone: 'Asia/Bangkok',
+    })
+    .replace(',', ' at');
+
   return tesla;
 }
 

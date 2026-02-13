@@ -19,6 +19,7 @@ export interface TeslaMateResponse {
   lng?: number;
 
   version: string;
+  lastUpdate: string;
 }
 
 export const createEmptyTeslaMate = (): TeslaMateResponse => ({
@@ -36,6 +37,7 @@ export const createEmptyTeslaMate = (): TeslaMateResponse => ({
   estimated_range_100: '',
   status: '',
   version: '',
+  lastUpdate: '',
 });
 
 export const getStatusName = (wallCharge: TeslaWallConnectorVitals | null): string => {
