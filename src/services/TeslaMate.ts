@@ -64,6 +64,14 @@ function parseTeslaMateHtml(dom: any): TeslaMateResponse {
   r = getRowValue(document, 'Status');
   tesla.status = r.value;
 
+  //Remaining Time'
+  r = getRowValue(document, 'Remaining Time');
+  tesla.remaining_time = r.value;
+
+  //Expected Finish Time
+  r = getRowValue(document, 'Expected Finish Time');
+  tesla.expected_finish_time = r.value;
+
   // Range (rated)
   r = getRowValue(document, 'Range (rated)');
   tesla.range_rated = parseFloat(r.value.replace('km', '')) || 0;

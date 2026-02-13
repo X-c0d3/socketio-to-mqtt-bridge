@@ -1,6 +1,9 @@
 import { TeslaWallConnectorVitals } from './TeslaWallConnector';
 
 export interface TeslaMateResponse {
+  status: string;
+  remaining_time: string;
+  expected_finish_time: string;
   range_rated: number; // km
   range_estimated: number; // km
   scheduled_charging: string;
@@ -11,7 +14,7 @@ export interface TeslaMateResponse {
   mileage: number; // km
   speed?: number; // km/h
   estimated_range_100: string;
-  status: string;
+
   lat?: number;
   lng?: number;
 
@@ -19,6 +22,8 @@ export interface TeslaMateResponse {
 }
 
 export const createEmptyTeslaMate = (): TeslaMateResponse => ({
+  remaining_time: '',
+  expected_finish_time: '',
   range_rated: 0,
   range_estimated: 0,
   scheduled_charging: '',
