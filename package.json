@@ -18,11 +18,10 @@
   },
   "dependencies": {
     "@types/dotenv": "^8.2.3",
-    "@types/mqtt": "^2.5.0",
     "@types/jsdom": "^16.2.10",
+    "@types/mqtt": "^2.5.0",
     "@types/socket.io-client": "1.4.36",
     "axios": "^1.13.5",
-    "cheerio": "^1.2.0",
     "dotenv": "^17.2.4",
     "jsdom": "^16.5.3",
     "socket.io-client": "^2.3.0"

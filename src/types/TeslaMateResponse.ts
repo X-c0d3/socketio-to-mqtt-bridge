@@ -3,6 +3,7 @@ import { TeslaWallConnectorVitals } from './TeslaWallConnector';
 export interface TeslaMateResponse {
   range_rated: number; // km
   range_estimated: number; // km
+  scheduled_charging: string;
   charge_limit: number; // %
   soc: number; // %
   temp_outside: number; // °C
@@ -20,6 +21,7 @@ export interface TeslaMateResponse {
 export const createEmptyTeslaMate = (): TeslaMateResponse => ({
   range_rated: 0,
   range_estimated: 0,
+  scheduled_charging: '',
   charge_limit: 0,
   soc: 0,
   temp_outside: 0,
