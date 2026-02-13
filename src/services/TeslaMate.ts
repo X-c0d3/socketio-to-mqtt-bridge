@@ -20,7 +20,13 @@ function getRowValue(document: Document, label: string): { value: string; toolti
         const dataDate = span.getAttribute('data-date') as any;
         const date = new Date(dataDate);
         return {
-          value: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }),
+          value: date.toLocaleTimeString('en-US', {
+            timeZone: 'Asia/Bangkok',
+            hour: 'numeric',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true,
+          }),
           tooltip: '',
         };
       }
@@ -111,8 +117,7 @@ const getTeslaMateInfo = async (): Promise<TeslaMateResponse | null> => {
     const res = await axios.get(`${AppConfig.TESLAMATE_URL}`, {
       timeout: 5000,
       headers: {
-        Accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
       },
     });
 
