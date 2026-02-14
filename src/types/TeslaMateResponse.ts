@@ -6,6 +6,8 @@ export interface TeslaMateResponse {
   expected_finish_time: string;
   range_rated: number; // km
   range_estimated: number; // km
+  charged: string;
+  charger_power: string;
   scheduled_charging: string;
   charge_limit: number; // %
   soc: number; // %
@@ -28,6 +30,8 @@ export const createEmptyTeslaMate = (): TeslaMateResponse => ({
   expected_finish_time: '',
   range_rated: 0,
   range_estimated: 0,
+  charged: '',
+  charger_power: '',
   scheduled_charging: '',
   charge_limit: 0,
   soc: 0,

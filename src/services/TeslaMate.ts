@@ -89,6 +89,14 @@ function parseTeslaMateHtml(dom: any): TeslaMateResponse {
   r = getRowValue(document, 'Range (rated)');
   tesla.range_rated = parseFloat(r.value.replace('km', '')) || 0;
 
+  //Charged
+  r = getRowValue(document, 'Charged');
+  tesla.charged = r.value;
+
+  //Charger Power
+  r = getRowValue(document, 'Charger Power');
+  tesla.charger_power = r.value;
+
   r = getRowValue(document, 'Scheduled Charging');
   tesla.scheduled_charging = r.value;
 
@@ -118,7 +126,7 @@ function parseTeslaMateHtml(dom: any): TeslaMateResponse {
 
   // Speed
   r = getRowValue(document, 'Speed');
-  tesla.speed = r.value ? parseFloat(r.value.replace(/[^0-9.]/g, '')) : -1;
+  tesla.speed = r.value ? parseFloat(r.value.replace(/[^0-9.]/g, '')) : 0;
 
   // Version (อยู่ใน <a>)
   const versionLink = document.querySelector('a[href*="software-updates/version"]');
