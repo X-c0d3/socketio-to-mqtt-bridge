@@ -127,7 +127,9 @@ function parseTeslaMateHtml(dom: any): TeslaMateResponse {
   }
 
   const indicatorIcons = extractTooltipsFromIcons(document);
-  tesla.isLocked = indicatorIcons.includes('Locked');
+  if (indicatorIcons.includes('Locked')) tesla.isLocked = true;
+  else if (indicatorIcons.includes('Unlocked')) tesla.isLocked = false;
+
   tesla.isPluggedIn = indicatorIcons.includes('Plugged In');
 
   const loc = parseLocation(document);
