@@ -53,6 +53,19 @@ function parseLocation(document: Document): { lat?: number; lng?: number } {
   };
 }
 
+function extractTooltipsFromIcons(document: Document): string[] {
+  const iconsDiv = document.querySelector('.icons.ml-5');
+  if (!iconsDiv) return [];
+
+  const tooltipElements = iconsDiv.querySelectorAll('[data-tooltip]');
+  const tooltips = Array.from(tooltipElements)
+    .filter((el) => !el.classList.contains('spinner'))
+    .map((el) => el.getAttribute('data-tooltip')?.trim() || '')
+    .filter((text) => text !== '');
+
+  return tooltips;
+}
+
 function parseTeslaMateHtml(dom: any): TeslaMateResponse {
   const document = dom.window.document;
 
@@ -112,6 +125,10 @@ function parseTeslaMateHtml(dom: any): TeslaMateResponse {
   if (versionLink) {
     tesla.version = versionLink.textContent?.trim() ?? '';
   }
+
+  const indicatorIcons = extractTooltipsFromIcons(document);
+  tesla.isLocked = indicatorIcons.includes('Locked');
+  tesla.isPluggedIn = indicatorIcons.includes('Plugged In');
 
   const loc = parseLocation(document);
   tesla.lat = loc.lat;

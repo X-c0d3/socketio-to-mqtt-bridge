@@ -14,7 +14,8 @@ export interface TeslaMateResponse {
   mileage: number; // km
   speed?: number; // km/h
   estimated_range_100: string;
-
+  isLocked: boolean;
+  isPluggedIn: boolean;
   lat?: number;
   lng?: number;
 
@@ -38,6 +39,8 @@ export const createEmptyTeslaMate = (): TeslaMateResponse => ({
   status: '',
   version: '',
   lastUpdate: '',
+  isLocked: false,
+  isPluggedIn: false,
 });
 
 export const getStatusName = (wallCharge: TeslaWallConnectorVitals | null): string => {
