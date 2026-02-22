@@ -31,7 +31,6 @@ const AppConfig = {
 
   TESLA_CLIENT_ID: process.env.TESLA_CLIENT_ID,
   TESLA_CLIENT_SECRET: process.env.TESLA_CLIENT_SECRET,
-  TESLA_DOMAIN: process.env.TESLA_DOMAIN,
   TESLA_OAUTH_BASE: process.env.TESLA_OAUTH_BASE,
   TESLA_API_BASE: process.env.TESLA_API_BASE,
   TESLA_PROXY_BASE: process.env.TESLA_PROXY_BASE,
@@ -42,6 +41,9 @@ const AppConfig = {
 
   TELEGRAM_API_KEY: process.env.TELEGRAM_API_KEY,
   TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
+
+  CHARGE_HOUR_START: process.env.CHARGE_HOUR_START || 10,
+  CHARGE_HOUR_END: process.env.CHARGE_HOUR_END || 16,
 };
 
 export { AppConfig };

@@ -1,6 +1,7 @@
+import { AppConfig } from '../constants/Constants';
 import { isInTimeWindow, toLocalDateTimeTH } from '../util/Helper';
 import { sendTelegramNotify } from '../util/TelegramNotify';
-import { getValidToken, setChargeCurrent, initalFlatAPIConfig, updateCommandCounter } from './TeslaFleet';
+import { getValidToken, setChargeCurrent, initalFlatAPIConfig, updateCommandCounter } from './TeslaFleetApi';
 
 const MIN_AMPS = 5;
 const MAX_AMPS = 32;
@@ -64,7 +65,7 @@ export async function solarChargingControl(data: any) {
   try {
     await resetDailyCounterIfNeeded();
 
-    if (!isInTimeWindow(10, 16)) {
+    if (!isInTimeWindow(Number(AppConfig.CHARGE_HOUR_START), Number(AppConfig.CHARGE_HOUR_END))) {
       console.log('⏰ Outside time window');
       return;
     }
