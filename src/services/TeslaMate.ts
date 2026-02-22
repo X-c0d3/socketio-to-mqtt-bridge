@@ -2,6 +2,7 @@ import axios from 'axios';
 import { AppConfig } from '../constants/Constants';
 import { JSDOM } from 'jsdom';
 import { createEmptyTeslaMate, TeslaMateResponse } from '../types/TeslaMateResponse';
+import { toLocalDateTimeTH } from '../util/Helper';
 
 function getRowValue(document: Document, label: string): { value: string; tooltip: string } {
   const rows = document.querySelectorAll('tbody tr');
@@ -144,19 +145,7 @@ function parseTeslaMateHtml(dom: any): TeslaMateResponse {
   tesla.lat = loc.lat;
   tesla.lng = loc.lng;
 
-  const now = new Date();
-  tesla.lastUpdate = now
-    .toLocaleString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-      timeZone: 'Asia/Bangkok',
-    })
-    .replace(',', ' at');
+  tesla.lastUpdate = toLocalDateTimeTH().replace(',', ' at');
 
   return tesla;
 }
