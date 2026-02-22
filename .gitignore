@@ -3,4 +3,4 @@ build
 dist
 .env.local
 .DS_Store
-download
+token.json
