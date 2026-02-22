@@ -1,0 +1,150 @@
+import { isInTimeWindow, toLocalDateTimeTH } from '../util/Helper';
+import { sendTelegramNotify } from '../util/TelegramNotify';
+import { getValidToken, setChargeCurrent, initalFlatAPIConfig, updateCommandCounter } from './TeslaFleet';
+
+const MIN_AMPS = 5;
+const MAX_AMPS = 32;
+const STEP = 1;
+
+const IMPORT_THRESHOLD = 120; // ถ้ามากกว่า > 120w จะต้องลด กระแสการชาร์จลง
+const ZERO_THRESHOLD = 50; // ถ้าน้อยกว่า < 50W จะต้องเพิ่มกระแสการชาร์จขึ้น
+
+const GRID_AVG_SAMPLES = 10;
+const ADJUST_DELAY = 40_000;
+const MAX_DAILY_COMMANDS = 330; // Limit qoata to 330 commands per day
+
+let currentAmps: number | null = null;
+let lastAdjustTime = Date.now();
+let gridHistory: number[] = [];
+let lastSentAmps: number | null = null;
+
+let dailyCounter = 0;
+let lastResetDate = new Date().toDateString();
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+async function resetDailyCounterIfNeeded() {
+  const today = new Date().toDateString();
+  if (today !== lastResetDate) {
+    dailyCounter = 0;
+    lastResetDate = today;
+    await updateCommandCounter(0);
+    sendTelegramNotify('🔄 Daily counter reset');
+  }
+}
+
+function getAverageGridPower(value: number) {
+  gridHistory.push(value);
+
+  if (gridHistory.length > GRID_AVG_SAMPLES) {
+    gridHistory.shift();
+  }
+
+  const sum = gridHistory.reduce((a, b) => a + b, 0);
+  return sum / gridHistory.length;
+}
+
+function syncInitialAmps(data: any) {
+  const actualAmps = Math.round(data?.tesla?.wallCharge?.vehicle_current_a ?? 0);
+
+  if (actualAmps >= MIN_AMPS && actualAmps <= MAX_AMPS) {
+    currentAmps = actualAmps;
+    lastSentAmps = actualAmps;
+    console.log(`🔄 Sync initial amps from WallConnector: ${actualAmps}A`);
+  } else {
+    currentAmps = MIN_AMPS;
+    lastSentAmps = MIN_AMPS;
+    console.log(`⚠️ Invalid current detected, fallback to ${MIN_AMPS}A`);
+  }
+}
+
+export async function solarChargingControl(data: any) {
+  try {
+    await resetDailyCounterIfNeeded();
+
+    if (!isInTimeWindow(10, 16)) {
+      console.log('⏰ Outside time window');
+      return;
+    }
+
+    if (currentAmps === null) {
+      let config = await initalFlatAPIConfig();
+      dailyCounter = config.dailyCounter;
+      syncInitialAmps(data);
+      return;
+    }
+
+    if (dailyCounter >= MAX_DAILY_COMMANDS) {
+      console.log('Daily command limit reached');
+      return;
+    }
+
+    const rawGridPowerKW = data?.deviceState?.grid_power ?? 0;
+    const avgGridPower = getAverageGridPower(rawGridPowerKW * 1000);
+
+    const now = Date.now();
+    if (now - lastAdjustTime < ADJUST_DELAY) {
+      // รอให้ครบ delay ก่อนปรับ
+      return;
+    }
+
+    await getValidToken();
+
+    let direction: 'UP' | 'DOWN' | null = null;
+    let newAmps = currentAmps;
+
+    let actualStep = STEP;
+    if (avgGridPower > IMPORT_THRESHOLD) {
+      if (avgGridPower > 500) actualStep = 2;
+      if (avgGridPower > 2000) actualStep = 3;
+
+      newAmps = clamp(currentAmps - actualStep, MIN_AMPS, MAX_AMPS);
+      direction = 'DOWN';
+    } else if (Math.abs(avgGridPower) < ZERO_THRESHOLD) {
+      newAmps = clamp(currentAmps + actualStep, MIN_AMPS, MAX_AMPS);
+      direction = 'UP';
+    }
+
+    if (direction && newAmps !== currentAmps && gridHistory.length >= GRID_AVG_SAMPLES) {
+      const secondsSinceLastAdjust = (now - lastAdjustTime) / 1000;
+
+      lastAdjustTime = now;
+      const ok = await setCurrent(newAmps, direction, actualStep, avgGridPower, secondsSinceLastAdjust, data);
+      if (ok) {
+        currentAmps = newAmps;
+      }
+    }
+
+    console.log(
+      `Grid avg: ${avgGridPower.toFixed(0)}W | NewAmps: ${newAmps}A Current: ${currentAmps}A | Direction: ${direction ?? 'None'} | GridAvgSamples: ${gridHistory.length} | Cmd Counter: ${dailyCounter}/${MAX_DAILY_COMMANDS} | Soc: ${data?.tesla.teslaMate.soc}/${data?.tesla.teslaMate.charge_limit}%`,
+    );
+  } catch (err) {
+    console.error('Control loop error:', err);
+  }
+}
+
+async function setCurrent(newAmps: number, direction: 'UP' | 'DOWN', actualStep: number, avgGridPower: number, secondsSinceLastAdjust: number, data: any) {
+  if (newAmps === lastSentAmps) {
+    console.log(`Skip API (same amps ${newAmps})`);
+    return true;
+  }
+
+  dailyCounter++;
+  sendTelegramNotify(`
+✅ Set charging ${lastSentAmps}A to ${newAmps}A 
+Direction: ${direction === 'UP' ? '⬆️' : '⬇️'} (STEP: ${actualStep}A) ~ ${avgGridPower.toFixed(0)}W 
+Daily Counter: ${dailyCounter} / ${MAX_DAILY_COMMANDS} per days
+Soc: ${data?.tesla.teslaMate.soc}% | Charged Limit: ${data?.tesla.teslaMate.charge_limit}% 
+⏱ ${secondsSinceLastAdjust.toFixed(1)}s since last adjust
+Grid: ${data.tesla?.wallCharge.grid_v.toFixed(0)} V / ${data.tesla?.wallCharge.vehicle_current_a} A | Charging: ~ ${(data.tesla.wallCharge.grid_v * data.tesla?.wallCharge.vehicle_current_a).toFixed(0)} W
+LastUpdate: ${toLocalDateTimeTH()}`);
+
+  const success = await setChargeCurrent(newAmps);
+  if (success) {
+    lastSentAmps = newAmps;
+    await updateCommandCounter(dailyCounter);
+  }
+  return success;
+}

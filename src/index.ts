@@ -5,6 +5,8 @@ import { getWallConnector } from './services/Wallconnector';
 import { TeslaWallConnectorVitals } from './types/TeslaWallConnector';
 import { getTeslaMateInfo } from './services/TeslaMate';
 import { getStatusName } from './types/TeslaMateResponse';
+import { solarChargingControl } from './services/ChargeControl';
+import { toLocalDateTimeTH } from './util/Helper';
 
 const lastPublishTime: any = {};
 const lastData: any = {};
@@ -79,14 +81,23 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
     return;
   }
 
-  console.log('Received from Socket.IO:', lastData[deviceKey]);
+  const sensorData = lastData[deviceKey];
+  if (deviceKey === 'Huawei_SUN2000_10K_LC0') {
+    const { vehicle_current_a, contactor_closed } = sensorData.tesla.wallCharge;
+    //Only charge if contactor is open and current is above 5A
+    if (vehicle_current_a >= 5 && contactor_closed && sensorData.deviceState.pv_power > 0) {
+      await solarChargingControl(sensorData);
+    }
+  }
+
   counter++;
+  console.log('Received from Socket.IO:', sensorData);
   const topic = `${AppConfig.MQTT_TOPIC_BASE}/${deviceKey}/state`;
-  console.log(new Date().toISOString(), `[${counter}] Publish to MQTT topic:`, topic);
+  console.log(toLocalDateTimeTH(), `[${counter}] Publish to MQTT topic:`, topic);
+
   //Publish to MQTT
-  mqttClient.publish(topic, JSON.stringify(lastData[deviceKey]), { qos: 1, retain: true }, (err) => {
+  mqttClient.publish(topic, JSON.stringify(sensorData), { qos: 1, retain: true }, (err) => {
     if (err) console.error('Publish error:', err);
-    else console.log(`Published full JSON to ${topic}`);
   });
 
   lastPublishTime[deviceKey] = now;
