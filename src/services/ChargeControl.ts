@@ -22,11 +22,9 @@ let lastSentAmps: number | null = null;
 let dailyCounter = 0;
 let lastResetDate = new Date().toDateString();
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
-}
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-async function resetDailyCounterIfNeeded() {
+const resetDailyCounter = async (): Promise<void> => {
   const today = new Date().toDateString();
   if (today !== lastResetDate) {
     dailyCounter = 0;
@@ -34,9 +32,9 @@ async function resetDailyCounterIfNeeded() {
     await updateCommandCounter(0);
     sendTelegramNotify('🔄 Daily counter reset');
   }
-}
+};
 
-function getAverageGridPower(value: number) {
+const getAverageGridPower = (value: number) => {
   gridHistory.push(value);
 
   if (gridHistory.length > GRID_AVG_SAMPLES) {
@@ -45,9 +43,9 @@ function getAverageGridPower(value: number) {
 
   const sum = gridHistory.reduce((a, b) => a + b, 0);
   return sum / gridHistory.length;
-}
+};
 
-function syncInitialAmps(data: any) {
+const syncInitialAmps = (data: any) => {
   const actualAmps = Math.round(data?.tesla?.wallCharge?.vehicle_current_a ?? 0);
 
   if (actualAmps >= MIN_AMPS && actualAmps <= MAX_AMPS) {
@@ -59,12 +57,10 @@ function syncInitialAmps(data: any) {
     lastSentAmps = MIN_AMPS;
     console.log(`⚠️ Invalid current detected, fallback to ${MIN_AMPS}A`);
   }
-}
+};
 
-export async function solarChargingControl(data: any) {
+export const solarChargingControl = async (data: any) => {
   try {
-    await resetDailyCounterIfNeeded();
-
     if (!isInTimeWindow(Number(AppConfig.CHARGE_HOUR_START), Number(AppConfig.CHARGE_HOUR_END))) {
       console.log('⏰ Outside time window');
       return;
@@ -73,9 +69,12 @@ export async function solarChargingControl(data: any) {
     if (currentAmps === null) {
       let config = await initalFlatAPIConfig();
       dailyCounter = config.dailyCounter;
+      lastResetDate = new Date(config.lastUpdate).toDateString();
       syncInitialAmps(data);
       return;
     }
+
+    await resetDailyCounter();
 
     if (dailyCounter >= MAX_DAILY_COMMANDS) {
       console.log('Daily command limit reached');
@@ -124,9 +123,9 @@ export async function solarChargingControl(data: any) {
   } catch (err) {
     console.error('Control loop error:', err);
   }
-}
+};
 
-async function setCurrent(newAmps: number, direction: 'UP' | 'DOWN', actualStep: number, avgGridPower: number, secondsSinceLastAdjust: number, data: any) {
+const setCurrent = async (newAmps: number, direction: 'UP' | 'DOWN', actualStep: number, avgGridPower: number, secondsSinceLastAdjust: number, data: any): Promise<boolean> => {
   if (newAmps === lastSentAmps) {
     console.log(`Skip API (same amps ${newAmps})`);
     return true;
@@ -148,4 +147,4 @@ LastUpdate: ${toLocalDateTimeTH()}`);
     await updateCommandCounter(dailyCounter);
   }
   return success;
-}
+};

@@ -5,7 +5,7 @@ import https from 'https';
 import { AppConfig } from '../constants/Constants';
 import { TokenFleetTokenResponse } from '../types/TokenFleetTokenResponse';
 import { sendTelegramNotify } from '../util/TelegramNotify';
-import { getAuthorHeader, toLocalDateTimeTH } from '../util/Helper';
+import { getAuthorHeader } from '../util/Helper';
 
 axios.defaults.httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
@@ -17,6 +17,7 @@ var accessTokenExpiresAt = 0;
 var dailyCounter = 0;
 
 const teslaProxyDomain = (endpoint: string) => `${AppConfig.TESLA_PROXY_BASE}/api/1/vehicles/${AppConfig.TESLA_VIN}/${endpoint}`;
+const teslaOauthDomain = () => `${AppConfig.TESLA_OAUTH_BASE}/oauth2/v3/token`;
 
 export const initalFlatAPIConfig = async (): Promise<any> => {
   if (!(await fs.pathExists(TOKEN_PATH))) {
@@ -39,9 +40,10 @@ export const updateCommandCounter = async (counter: number): Promise<void> => {
   }
   dailyCounter = counter;
 
+  const now = new Date();
   let config = await fs.readJson(TOKEN_PATH);
   config.dailyCounter = counter;
-  config.lastUpdate = toLocalDateTimeTH();
+  config.lastUpdate = now.toISOString();
   await saveToken(config);
 };
 
@@ -77,10 +79,8 @@ export const getValidToken = async (): Promise<string> => {
 
   sendTelegramNotify('Access token ใกล้หมดอายุหรือหมดแล้ว → Refresh...');
   try {
-    const newTokens = await refreshToken();
-    currentAccessToken = newTokens.access_token;
-    currentRefreshToken = newTokens.refresh_token;
-    accessTokenExpiresAt = newTokens.expires_at;
+    await refreshToken();
+    await initalFlatAPIConfig();
 
     sendTelegramNotify('Refresh สำเร็จ! Expires at: ' + new Date(accessTokenExpiresAt).toISOString());
     return currentAccessToken;
@@ -93,7 +93,7 @@ export const getValidToken = async (): Promise<string> => {
 export const refreshToken = async (): Promise<TokenFleetTokenResponse> => {
   try {
     const response = await axios.post<TokenFleetTokenResponse>(
-      `${AppConfig.TESLA_OAUTH_BASE}/oauth2/v3/token`,
+      teslaOauthDomain(),
       new URLSearchParams({
         grant_type: 'refresh_token',
         client_id: AppConfig.TESLA_CLIENT_ID || '',
@@ -107,25 +107,24 @@ export const refreshToken = async (): Promise<TokenFleetTokenResponse> => {
       },
     );
 
-    const data = response.data;
-    console.log('Refresh success!');
-    console.log('Refresh token new:', data.refresh_token);
-
     const newToken = response.data;
-    const expiresAt = Date.now() + newToken.expires_in * 1000;
+    console.log('Refresh success!');
+    console.log('Refresh token new:', newToken.refresh_token);
+
+    const now = new Date();
     const tokenData = {
       access_token: newToken.access_token,
       refresh_token: newToken.refresh_token || currentRefreshToken,
       expires_in: newToken.expires_in,
       id_token: newToken.id_token,
-      expires_at: expiresAt,
+      expires_at: Date.now() + newToken.expires_in * 1000,
       dailyCounter: dailyCounter,
-      lastUpdate: toLocalDateTimeTH(),
+      lastUpdate: now.toISOString(),
     };
 
     await saveToken(tokenData);
 
-    return data;
+    return newToken;
   } catch (error: any) {
     sendTelegramNotify('Refresh token ล้มเหลว:' + error.response?.data || error.message);
     if (error.response?.data?.error === 'login_required' || error.response?.data?.error === 'invalid_grant') {
