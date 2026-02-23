@@ -4,7 +4,7 @@ import { JSDOM } from 'jsdom';
 import { createEmptyTeslaMate, TeslaMateResponse } from '../types/TeslaMateResponse';
 import { toLocalDateTimeTH } from '../util/Helper';
 
-function getRowValue(document: Document, label: string): { value: string; tooltip: string } {
+const getRowValue = (document: Document, label: string): { value: string; tooltip: string } => {
   const rows = document.querySelectorAll('tbody tr');
 
   for (const row of rows) {
@@ -40,9 +40,9 @@ function getRowValue(document: Document, label: string): { value: string; toolti
   }
 
   return { value: '', tooltip: '' };
-}
+};
 
-function parseLocation(document: Document): { lat?: number; lng?: number } {
+const parseLocation = (document: Document): { lat?: number; lng?: number } => {
   const input = document.querySelector('input[id^="position_"]') as HTMLInputElement | null;
   if (!input?.value) return {};
 
@@ -52,9 +52,9 @@ function parseLocation(document: Document): { lat?: number; lng?: number } {
     lat: isFinite(lat) ? lat : undefined,
     lng: isFinite(lng) ? lng : undefined,
   };
-}
+};
 
-function extractTooltipsFromIcons(document: Document): string[] {
+const extractTooltipsFromIcons = (document: Document): string[] => {
   const iconsDiv = document.querySelector('.icons.ml-5');
   if (!iconsDiv) return [];
 
@@ -65,9 +65,9 @@ function extractTooltipsFromIcons(document: Document): string[] {
     .filter((text) => text !== '');
 
   return tooltips;
-}
+};
 
-function parseTeslaMateHtml(dom: any): TeslaMateResponse {
+const parseTeslaMateHtml = (dom: any): TeslaMateResponse => {
   const document = dom.window.document;
 
   const tesla = createEmptyTeslaMate();
@@ -148,7 +148,7 @@ function parseTeslaMateHtml(dom: any): TeslaMateResponse {
   tesla.lastUpdate = toLocalDateTimeTH().replace(',', ' at');
 
   return tesla;
-}
+};
 
 const getTeslaMateInfo = async (): Promise<TeslaMateResponse | null> => {
   try {

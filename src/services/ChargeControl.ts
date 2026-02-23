@@ -20,13 +20,13 @@ let gridHistory: number[] = [];
 let lastSentAmps: number | null = null;
 
 let dailyCounter = 0;
-let lastResetDate = new Date().toDateString();
+let lastResetDate = '';
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 const resetDailyCounter = async (): Promise<void> => {
   const today = new Date().toDateString();
-  if (today !== lastResetDate) {
+  if (lastResetDate !== '' && today !== lastResetDate) {
     dailyCounter = 0;
     lastResetDate = today;
     await updateCommandCounter(0);
