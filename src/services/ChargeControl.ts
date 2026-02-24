@@ -3,7 +3,7 @@ import { isInTimeWindow, toLocalDateTimeTH } from '../util/Helper';
 import { sendTelegramNotify } from '../util/TelegramNotify';
 import { getValidToken, setChargeCurrent, initalFlatAPIConfig, updateCommandCounter } from './TeslaFleetApi';
 
-const MIN_AMPS = 5;
+const MIN_AMPS = 6;
 const MAX_AMPS = 32;
 const STEP = 1;
 
@@ -45,20 +45,6 @@ const getAverageGridPower = (value: number) => {
   return sum / gridHistory.length;
 };
 
-const syncInitialAmps = (data: any) => {
-  const actualAmps = Math.round(data?.tesla?.wallCharge?.vehicle_current_a ?? 0);
-
-  if (actualAmps >= MIN_AMPS && actualAmps <= MAX_AMPS) {
-    currentAmps = actualAmps;
-    lastSentAmps = actualAmps;
-    console.log(`🔄 Sync initial amps from WallConnector: ${actualAmps}A`);
-  } else {
-    currentAmps = MIN_AMPS;
-    lastSentAmps = MIN_AMPS;
-    console.log(`⚠️ Invalid current detected, fallback to ${MIN_AMPS}A`);
-  }
-};
-
 export const solarChargingControl = async (data: any) => {
   try {
     if (!isInTimeWindow(Number(AppConfig.CHARGE_HOUR_START), Number(AppConfig.CHARGE_HOUR_END))) {
@@ -70,7 +56,11 @@ export const solarChargingControl = async (data: any) => {
       let config = await initalFlatAPIConfig();
       dailyCounter = config.dailyCounter;
       lastResetDate = new Date(config.lastUpdate).toDateString();
-      syncInitialAmps(data);
+
+      const actualAmps = Math.round(data?.tesla?.wallCharge?.vehicle_current_a ?? 0);
+      sendTelegramNotify(`🔄 Starting amps sync. Detected current from WallConnector: ${actualAmps}A`);
+      currentAmps = actualAmps;
+      lastSentAmps = actualAmps;
       return;
     }
 
@@ -81,6 +71,7 @@ export const solarChargingControl = async (data: any) => {
       return;
     }
 
+    currentAmps = Math.round(data?.tesla?.wallCharge?.vehicle_current_a ?? 0);
     const rawGridPowerKW = data?.deviceState?.grid_power ?? 0;
     const avgGridPower = getAverageGridPower(rawGridPowerKW * 1000);
 
@@ -105,6 +96,12 @@ export const solarChargingControl = async (data: any) => {
     } else if (Math.abs(avgGridPower) < ZERO_THRESHOLD) {
       newAmps = clamp(currentAmps + actualStep, MIN_AMPS, MAX_AMPS);
       direction = 'UP';
+    }
+
+    if (newAmps <= MIN_AMPS) {
+      newAmps = MIN_AMPS;
+    } else if (newAmps >= MAX_AMPS) {
+      newAmps = MAX_AMPS;
     }
 
     if (direction && newAmps !== currentAmps && gridHistory.length >= GRID_AVG_SAMPLES) {
@@ -132,6 +129,7 @@ const setCurrent = async (newAmps: number, direction: 'UP' | 'DOWN', actualStep:
   }
 
   dailyCounter++;
+  console.log(`-----------------------------------------------`);
   sendTelegramNotify(`
 ✅ Set charging ${lastSentAmps}A to ${newAmps}A 
 Direction: ${direction === 'UP' ? '⬆️' : '⬇️'} (STEP: ${actualStep}A) ~ ${avgGridPower.toFixed(0)}W 
@@ -140,7 +138,7 @@ Soc: ${data?.tesla.teslaMate.soc}% | Charged Limit: ${data?.tesla.teslaMate.char
 ⏱ ${secondsSinceLastAdjust.toFixed(1)}s since last adjust
 Grid: ${data.tesla?.wallCharge.grid_v.toFixed(0)} V / ${data.tesla?.wallCharge.vehicle_current_a} A | Charging: ~ ${(data.tesla.wallCharge.grid_v * data.tesla?.wallCharge.vehicle_current_a).toFixed(0)} W
 LastUpdate: ${toLocalDateTimeTH()}`);
-
+  console.log(`-----------------------------------------------`);
   const success = await setChargeCurrent(newAmps);
   if (success) {
     lastSentAmps = newAmps;
