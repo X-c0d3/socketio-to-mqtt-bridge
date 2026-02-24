@@ -12,6 +12,9 @@ const ZERO_THRESHOLD = 50; // ถ้าน้อยกว่า < 50W จะต�
 
 const GRID_AVG_SAMPLES = 10;
 const ADJUST_DELAY = 40_000;
+
+// $10 สามารถซื้อได้: 10,000 commands (ถ้าใช้เฉพาะคำสั่ง)
+// โค้ดปัจจุบัน MAX_DAILY_COMMANDS = 330 → 330 * 30 ≈ 9,900 commands/เดือน ≈ $9.90 → อยู่ภายในงบ $10 แต่เหลือ margin ต่ำ (~$0.10)
 const MAX_DAILY_COMMANDS = 330; // Limit qoata to 330 commands per day
 
 let currentAmps: number | null = null;
@@ -65,11 +68,6 @@ export const solarChargingControl = async (data: any) => {
     }
 
     await resetDailyCounter();
-
-    if (dailyCounter >= MAX_DAILY_COMMANDS) {
-      console.log('Daily command limit reached');
-      return;
-    }
 
     currentAmps = Math.round(data?.tesla?.wallCharge?.vehicle_current_a ?? 0);
     const rawGridPowerKW = data?.deviceState?.grid_power ?? 0;
@@ -125,7 +123,12 @@ export const solarChargingControl = async (data: any) => {
 const setCurrent = async (newAmps: number, direction: 'UP' | 'DOWN', actualStep: number, avgGridPower: number, secondsSinceLastAdjust: number, data: any): Promise<boolean> => {
   if (newAmps === lastSentAmps) {
     console.log(`Skip API (same amps ${newAmps})`);
-    return true;
+    return false;
+  }
+
+  if (dailyCounter >= MAX_DAILY_COMMANDS) {
+    console.log('Daily command limit reached (prevent send)');
+    return false;
   }
 
   dailyCounter++;
