@@ -12,14 +12,14 @@ const sendTelegramNotify = async (message: String) => {
   await axios({
     method: 'post',
     url: `https://api.telegram.org/bot${AppConfig.TELEGRAM_API_KEY}/sendMessage`,
-    timeout: 5000,
+    timeout: 8000,
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     data: {
       chat_id: AppConfig.TELEGRAM_CHAT_ID,
       text: message,
-      parse_mode: 'HTML',
+      //parse_mode: 'HTML',
     },
   }).catch((err) => console.log(err));
 };

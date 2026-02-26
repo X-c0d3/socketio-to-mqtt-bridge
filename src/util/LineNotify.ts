@@ -16,7 +16,7 @@ const sendLineNotify = async (message: String) => {
   await axios({
     method: 'post',
     url: 'https://api.line.me/v2/bot/message/multicast',
-    timeout: 5000,
+    timeout: 8000,
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${AppConfig.LINE_TOKEN}`,

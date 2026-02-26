@@ -3,7 +3,7 @@ import { isInTimeWindow, toLocalDateTimeTH } from '../util/Helper';
 import { sendTelegramNotify } from '../util/TelegramNotify';
 import { getValidToken, setChargeCurrent, initalFlatAPIConfig, updateCommandCounter } from './TeslaFleetApi';
 
-const MIN_AMPS = 6;
+const MIN_AMPS = 5;
 const MAX_AMPS = 32;
 const STEP = 1;
 
@@ -26,7 +26,7 @@ let dailyCounter = 0;
 let lastResetDate = '';
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
-
+const formatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 const resetDailyCounter = async (): Promise<void> => {
   const today = new Date().toDateString();
   if (lastResetDate !== '' && today !== lastResetDate) {
@@ -114,7 +114,7 @@ export const solarChargingControl = async (data: any) => {
     }
 
     console.log(
-      `Grid avg: ${avgGridPower.toFixed(0)}W | NewAmps: ${newAmps}A Current: ${currentAmps}A | Direction: ${direction ?? 'None'} | GridAvgSamples: ${gridHistory.length} | Cmd Counter: ${dailyCounter}/${MAX_DAILY_COMMANDS} | Soc: ${data?.tesla.teslaMate.soc}/${data?.tesla.teslaMate.charge_limit}%`,
+      `PV ${formatter.format(data?.deviceState.pv_power * 1000)} W Grid AVG: ${formatter.format(avgGridPower)} W | NewAmps: ${newAmps} A CurrentAmps: ${currentAmps} A | Direction: ${direction ?? 'None'} | GridAvgSamples: ${gridHistory.length} | FleetAPI Counter: ${dailyCounter}/${MAX_DAILY_COMMANDS} | Soc: ${data?.tesla.teslaMate.soc}/${data?.tesla.teslaMate.charge_limit} %`,
     );
   } catch (err) {
     console.error('Control loop error:', err);
@@ -137,11 +137,11 @@ const setCurrent = async (newAmps: number, direction: 'UP' | 'DOWN', actualStep:
     console.log(`-----------------------------------------------`);
     sendTelegramNotify(`
 ✅ Set charging ${lastSentAmps}A to ${newAmps}A 
-Direction: ${direction === 'UP' ? '⬆️' : '⬇️'} (STEP: ${actualStep}A) ~ ${avgGridPower.toFixed(0)}W 
+Direction: ${direction === 'UP' ? '⬆️' : '⬇️'} (STEP: ${actualStep}A) ~ Grid: ${formatter.format(avgGridPower)} W 
 Daily Counter: ${dailyCounter} / ${MAX_DAILY_COMMANDS} per days
 Soc: ${data?.tesla.teslaMate.soc}% | Charged Limit: ${data?.tesla.teslaMate.charge_limit}% 
 ⏱ ${secondsSinceLastAdjust.toFixed(1)}s since last adjust
-Grid: ${data.tesla?.wallCharge.grid_v.toFixed(0)} V / ${data.tesla?.wallCharge.vehicle_current_a} A | Charging: ~ ${(data.tesla.wallCharge.grid_v * data.tesla?.wallCharge.vehicle_current_a).toFixed(0)} W
+Grid: ${data.tesla?.wallCharge.grid_v.toFixed(0)} V / ${data.tesla?.wallCharge.vehicle_current_a} A | Charging: ~ ${formatter.format(data.tesla.wallCharge.grid_v * data.tesla?.wallCharge.vehicle_current_a)} W
 LastUpdate: ${toLocalDateTimeTH()}`);
     console.log(`-----------------------------------------------`);
     const success = await setChargeCurrent(newAmps);
