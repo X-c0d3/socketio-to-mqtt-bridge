@@ -91,7 +91,7 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
   }
 
   counter++;
-  console.log('Received from Socket.IO:', sensorData);
+  //console.log('Received from Socket.IO:', sensorData);
   const topic = `${AppConfig.MQTT_TOPIC_BASE}/${deviceKey}/state`;
   console.log(toLocalDateTimeTH(), `[${counter}] Publish to MQTT topic:`, topic);
 
