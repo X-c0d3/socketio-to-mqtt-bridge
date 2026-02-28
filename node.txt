@@ -1,0 +1,31 @@
+openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+  -keyout config/tls-key.pem \
+  -out config/tls-cert.pem \
+  -subj "/CN=localhost"
+  
+ chmod 600 ./config/tls-key.pem
+
+- private-key.pem. ไฟเดียวกันกับตอนที่สร้างไว้บน webserver
+- tls-key.pem และ tls-cert.pem. สร้างใหม่
+
+
+docker run -d --security-opt=no-new-privileges:true -v ./config:/config -p 4443:4443 tesla/vehicle-command:latest -tls-key /config/tls-key.pem -cert /config/tls-cert.pem -key-file /config/private-key.pem -host 0.0.0.0 -port 4443
+
+docker logs tesla-proxy
+
+
+Testing
+
+
+curl --request POST --header 'Authorization: Bearer *****' \
+  --header 'Content-Type: application/json' \
+  --data '{"which_trunk": "rear"}' \
+  'https://192.168.137.21:4443/api/1/vehicles/<MY VIN>/command/actuate_trunk' --insecure | jq
+  
+  
+  
+  
+curl --request POST --header 'Authorization: Bearer *******' \
+  --header 'Content-Type: application/json' \
+  --data '{"charging_amps": 20}' \
+  'https://192.168.137.21:4443/api/1/vehicles/<MY VIN>/command/set_charging_amps' --insecure | jq
