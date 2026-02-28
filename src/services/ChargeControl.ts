@@ -1,3 +1,9 @@
+/*
+  # Author : Watchara Pongsri
+  # [github/X-c0d3] https://github.com/X-c0d3/
+  # Web Site: https://www.rockdevper.com
+*/
+
 import { AppConfig } from '../constants/Constants';
 import { isInTimeWindow, toLocalDateTimeTH } from '../util/Helper';
 import { sendTelegramNotify } from '../util/TelegramNotify';

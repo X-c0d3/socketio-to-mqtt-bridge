@@ -1,3 +1,9 @@
+/*
+  # Author : Watchara Pongsri
+  # [github/X-c0d3] https://github.com/X-c0d3/
+  # Web Site: https://www.rockdevper.com
+*/
+
 import io from 'socket.io-client';
 import mqtt from 'mqtt';
 import { AppConfig } from './constants/Constants';
