@@ -84,8 +84,13 @@ function toSafeNumber(value: string | undefined | null): number | null {
 const getRandomValues = (min: number, max: number) => (Math.random() * (max - min + 1) + min) | 0;
 
 function isInTimeWindow(startHour: number, endHour: number): boolean {
-  const now = new Date();
-  const hour = now.getHours();
+  const bkkTime = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Bangkok',
+    hour: 'numeric',
+    hour12: false,
+  }).format(new Date());
+
+  const hour = parseInt(bkkTime);
   return hour >= startHour && hour < endHour;
 }
 
