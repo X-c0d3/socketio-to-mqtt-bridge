@@ -54,7 +54,7 @@ const getAverageGridPower = (value: number) => {
   return sum / gridHistory.length;
 };
 
-export const solarChargingControl = async (data: any) => {
+export const solarChargingControl = async (data: any): Promise<void> => {
   try {
     const { vehicle_current_a, contactor_closed } = data?.tesla.wallCharge;
     const { grid_power, pv_power } = data?.deviceState;
