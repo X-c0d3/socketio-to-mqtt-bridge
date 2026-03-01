@@ -28,7 +28,7 @@ let lastAdjustTime = Date.now();
 let gridHistory: number[] = [];
 let lastSentAmps: number | null = null;
 
-let dailyCounter = 0;
+let FLEET_API_COUNTER = 0;
 let lastResetDate = '';
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
@@ -36,7 +36,7 @@ const formatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 const resetDailyCounter = async (): Promise<void> => {
   const today = new Date().toDateString();
   if (lastResetDate !== '' && today !== lastResetDate) {
-    dailyCounter = 0;
+    FLEET_API_COUNTER = 0;
     lastResetDate = today;
     await updateCommandCounter(0);
     await sendTelegramNotify('🔄 Daily counter reset');
@@ -54,7 +54,7 @@ const getAverageGridPower = (value: number) => {
   return sum / gridHistory.length;
 };
 
-export const solarChargingControl = async (data: any): Promise<void> => {
+export const solarChargingControl = async (data: any): Promise<number> => {
   try {
     const { vehicle_current_a, contactor_closed } = data?.tesla.wallCharge;
     const { grid_power, pv_power } = data?.deviceState;
@@ -62,7 +62,7 @@ export const solarChargingControl = async (data: any): Promise<void> => {
 
     if (currentAmps === null) {
       let config = await initalFlatAPIConfig();
-      dailyCounter = config.dailyCounter;
+      FLEET_API_COUNTER = config.dailyCounter;
       lastResetDate = new Date(config.lastUpdate).toDateString();
 
       const actualAmps = Math.round(vehicle_current_a ?? 0);
@@ -70,7 +70,7 @@ export const solarChargingControl = async (data: any): Promise<void> => {
       currentAmps = actualAmps <= MIN_AMPS ? MIN_AMPS : actualAmps;
       lastSentAmps = actualAmps <= MIN_AMPS ? MIN_AMPS : actualAmps;
       await sendTelegramNotify(`🔄 Starting amps sync. Detected current from WallConnector: ${currentAmps}A`);
-      return;
+      return FLEET_API_COUNTER;
     }
 
     await resetDailyCounter();
@@ -81,19 +81,19 @@ export const solarChargingControl = async (data: any): Promise<void> => {
     const now = Date.now();
     if (now - lastAdjustTime < ADJUST_DELAY) {
       // รอให้ครบ delay ก่อนปรับ
-      return;
+      return FLEET_API_COUNTER;
     }
 
     await getValidToken();
 
     // only charge if contactor_closed =true and current is above 5A and PV power is available
     if (!(vehicle_current_a >= 5 && contactor_closed && pv_power > 0)) {
-      return;
+      return FLEET_API_COUNTER;
     }
 
     if (!isInTimeWindow(Number(AppConfig.CHARGE_HOUR_START), Number(AppConfig.CHARGE_HOUR_END))) {
       console.log('⏰ Outside time window');
-      return;
+      return FLEET_API_COUNTER;
     }
 
     let direction: 'UP' | 'DOWN' | null = null;
@@ -129,11 +129,12 @@ export const solarChargingControl = async (data: any): Promise<void> => {
     }
 
     console.log(
-      `PV ${formatter.format(pv_power * 1000)} W Grid AVG: ${formatter.format(avgGridPower)} W | NewAmps: ${newAmps} A CurrentAmps: ${currentAmps} A | Direction: ${direction ?? 'None'} | GridAvgSamples: ${gridHistory.length} | FleetAPI Counter: ${dailyCounter}/${MAX_DAILY_COMMANDS} | Soc: ${soc}/${charge_limit} %`,
+      `PV ${formatter.format(pv_power * 1000)} W Grid AVG: ${formatter.format(avgGridPower)} W | NewAmps: ${newAmps} A CurrentAmps: ${currentAmps} A | Direction: ${direction ?? 'None'} | GridAvgSamples: ${gridHistory.length} | FleetAPI Counter: ${FLEET_API_COUNTER}/${MAX_DAILY_COMMANDS} | Soc: ${soc}/${charge_limit} %`,
     );
   } catch (err) {
     console.error('Control loop error:', err);
   }
+  return FLEET_API_COUNTER;
 };
 
 const setCurrent = async (newAmps: number, direction: 'UP' | 'DOWN', actualStep: number, avgGridPower: number, secondsSinceLastAdjust: number, data: any): Promise<boolean> => {
@@ -143,17 +144,17 @@ const setCurrent = async (newAmps: number, direction: 'UP' | 'DOWN', actualStep:
       return false;
     }
 
-    if (dailyCounter >= MAX_DAILY_COMMANDS) {
+    if (FLEET_API_COUNTER >= MAX_DAILY_COMMANDS) {
       console.log('Daily command limit reached (prevent send)');
       return false;
     }
 
-    dailyCounter++;
+    FLEET_API_COUNTER++;
     console.log(`-----------------------------------------------`);
     await sendTelegramNotify(`
 ✅ Set charging ${lastSentAmps}A to ${newAmps}A 
 Direction: ${direction === 'UP' ? '⬆️' : '⬇️'} (STEP: ${actualStep}A) ~ Grid: ${formatter.format(avgGridPower)} W 
-Daily Counter: ${dailyCounter} / ${MAX_DAILY_COMMANDS} per days
+Daily Counter: ${FLEET_API_COUNTER} / ${MAX_DAILY_COMMANDS} per days
 Soc: ${data?.tesla.teslaMate.soc}% | Charged Limit: ${data?.tesla.teslaMate.charge_limit}% 
 ⏱ ${secondsSinceLastAdjust.toFixed(1)}s since last adjust
 Grid: ${data.tesla?.wallCharge.grid_v.toFixed(0)} V / ${data.tesla?.wallCharge.vehicle_current_a} A | Charging: ~ ${formatter.format(data.tesla.wallCharge.grid_v * data.tesla?.wallCharge.vehicle_current_a)} W
@@ -162,7 +163,7 @@ LastUpdate: ${toLocalDateTimeTH()}`);
     const success = await setChargeCurrent(newAmps);
     if (success) {
       lastSentAmps = newAmps;
-      await updateCommandCounter(dailyCounter);
+      await updateCommandCounter(FLEET_API_COUNTER);
     }
     return success;
   } catch (error: any) {

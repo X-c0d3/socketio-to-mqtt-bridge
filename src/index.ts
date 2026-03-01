@@ -74,6 +74,7 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
       tesla: {
         wallCharge,
         teslaMate,
+        fleetApiCounter: 0,
         // wifi_status,
         // lifetime,
         //deviceInfo,
@@ -89,7 +90,7 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
 
   const sensorData = lastData[deviceKey];
   if (deviceKey === 'Huawei_SUN2000_10K_LC0') {
-    await solarChargingControl(sensorData);
+    sensorData.tesla.fleetApiCounter = await solarChargingControl(sensorData);
   }
 
   counter++;
