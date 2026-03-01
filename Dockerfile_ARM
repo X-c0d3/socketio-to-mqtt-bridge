@@ -2,7 +2,7 @@ FROM arm64v8/node:20-alpine AS builder
 
 WORKDIR /app
 COPY package*.json ./
-COPY data ./data
+# COPY data ./data
 COPY .env ./
 RUN npm install
 COPY . .
@@ -13,7 +13,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY --from=builder /app/.env ./.env
-COPY --from=builder /app/data/token.json ./data/token.json
+# COPY --from=builder /app/data/token.json ./data/token.json.  need to map volume for this file in docker-compose.yml to persist token data
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 
