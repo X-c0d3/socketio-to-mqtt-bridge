@@ -7,7 +7,7 @@
 import axios from 'axios';
 import { AppConfig } from '../constants/Constants';
 
-const sendLineNotify = async (message: String) => {
+const sendLineNotify = async (message: String): Promise<void> => {
   const userIds = (AppConfig.LINE_SENDER_ID || '')
     .split(/[,]/)
     .map((s) => s.trim())
@@ -16,7 +16,7 @@ const sendLineNotify = async (message: String) => {
   await axios({
     method: 'post',
     url: 'https://api.line.me/v2/bot/message/multicast',
-    timeout: 8000,
+    timeout: 10000,
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${AppConfig.LINE_TOKEN}`,

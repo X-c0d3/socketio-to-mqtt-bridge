@@ -39,7 +39,7 @@ const resetDailyCounter = async (): Promise<void> => {
     dailyCounter = 0;
     lastResetDate = today;
     await updateCommandCounter(0);
-    sendTelegramNotify('🔄 Daily counter reset');
+    await sendTelegramNotify('🔄 Daily counter reset');
   }
 };
 
@@ -56,28 +56,27 @@ const getAverageGridPower = (value: number) => {
 
 export const solarChargingControl = async (data: any) => {
   try {
-    if (!isInTimeWindow(Number(AppConfig.CHARGE_HOUR_START), Number(AppConfig.CHARGE_HOUR_END))) {
-      console.log('⏰ Outside time window');
-      return;
-    }
+    const { vehicle_current_a, contactor_closed } = data?.tesla.wallCharge;
+    const { grid_power, pv_power } = data?.deviceState;
+    const { charge_limit, soc } = data?.tesla.teslaMate;
 
     if (currentAmps === null) {
       let config = await initalFlatAPIConfig();
       dailyCounter = config.dailyCounter;
       lastResetDate = new Date(config.lastUpdate).toDateString();
 
-      const actualAmps = Math.round(data?.tesla?.wallCharge?.vehicle_current_a ?? 0);
-      sendTelegramNotify(`🔄 Starting amps sync. Detected current from WallConnector: ${actualAmps}A`);
-      currentAmps = actualAmps;
-      lastSentAmps = actualAmps;
+      const actualAmps = Math.round(vehicle_current_a ?? 0);
+
+      currentAmps = actualAmps <= MIN_AMPS ? MIN_AMPS : actualAmps;
+      lastSentAmps = actualAmps <= MIN_AMPS ? MIN_AMPS : actualAmps;
+      await sendTelegramNotify(`🔄 Starting amps sync. Detected current from WallConnector: ${currentAmps}A`);
       return;
     }
 
     await resetDailyCounter();
 
-    currentAmps = Math.round(data?.tesla?.wallCharge?.vehicle_current_a ?? 0);
-    const rawGridPowerKW = data?.deviceState?.grid_power ?? 0;
-    const avgGridPower = getAverageGridPower(rawGridPowerKW * 1000);
+    currentAmps = Math.round(vehicle_current_a ?? 0);
+    const avgGridPower = getAverageGridPower((grid_power ?? 0) * 1000);
 
     const now = Date.now();
     if (now - lastAdjustTime < ADJUST_DELAY) {
@@ -86,6 +85,16 @@ export const solarChargingControl = async (data: any) => {
     }
 
     await getValidToken();
+
+    // only charge if contactor_closed =true and current is above 5A and PV power is available
+    if (!(vehicle_current_a >= 5 && contactor_closed && pv_power > 0)) {
+      return;
+    }
+
+    if (!isInTimeWindow(Number(AppConfig.CHARGE_HOUR_START), Number(AppConfig.CHARGE_HOUR_END))) {
+      console.log('⏰ Outside time window');
+      return;
+    }
 
     let direction: 'UP' | 'DOWN' | null = null;
     let newAmps = currentAmps;
@@ -120,7 +129,7 @@ export const solarChargingControl = async (data: any) => {
     }
 
     console.log(
-      `PV ${formatter.format(data?.deviceState.pv_power * 1000)} W Grid AVG: ${formatter.format(avgGridPower)} W | NewAmps: ${newAmps} A CurrentAmps: ${currentAmps} A | Direction: ${direction ?? 'None'} | GridAvgSamples: ${gridHistory.length} | FleetAPI Counter: ${dailyCounter}/${MAX_DAILY_COMMANDS} | Soc: ${data?.tesla.teslaMate.soc}/${data?.tesla.teslaMate.charge_limit} %`,
+      `PV ${formatter.format(pv_power * 1000)} W Grid AVG: ${formatter.format(avgGridPower)} W | NewAmps: ${newAmps} A CurrentAmps: ${currentAmps} A | Direction: ${direction ?? 'None'} | GridAvgSamples: ${gridHistory.length} | FleetAPI Counter: ${dailyCounter}/${MAX_DAILY_COMMANDS} | Soc: ${soc}/${charge_limit} %`,
     );
   } catch (err) {
     console.error('Control loop error:', err);
@@ -141,7 +150,7 @@ const setCurrent = async (newAmps: number, direction: 'UP' | 'DOWN', actualStep:
 
     dailyCounter++;
     console.log(`-----------------------------------------------`);
-    sendTelegramNotify(`
+    await sendTelegramNotify(`
 ✅ Set charging ${lastSentAmps}A to ${newAmps}A 
 Direction: ${direction === 'UP' ? '⬆️' : '⬇️'} (STEP: ${actualStep}A) ~ Grid: ${formatter.format(avgGridPower)} W 
 Daily Counter: ${dailyCounter} / ${MAX_DAILY_COMMANDS} per days
@@ -157,7 +166,7 @@ LastUpdate: ${toLocalDateTimeTH()}`);
     }
     return success;
   } catch (error: any) {
-    sendTelegramNotify('Error: ' + error.response?.data || error.message);
+    await sendTelegramNotify('Error: ' + error.response?.data || error.message);
     return false;
   }
 };

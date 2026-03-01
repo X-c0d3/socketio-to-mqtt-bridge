@@ -89,11 +89,7 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
 
   const sensorData = lastData[deviceKey];
   if (deviceKey === 'Huawei_SUN2000_10K_LC0') {
-    const { vehicle_current_a, contactor_closed } = sensorData.tesla.wallCharge;
-    //Only charge if contactor is open and current is above 5A
-    if (vehicle_current_a >= 5 && contactor_closed && sensorData.deviceState.pv_power > 0) {
-      await solarChargingControl(sensorData);
-    }
+    await solarChargingControl(sensorData);
   }
 
   counter++;

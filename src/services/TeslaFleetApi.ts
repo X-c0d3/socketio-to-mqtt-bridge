@@ -83,15 +83,15 @@ export const getValidToken = async (): Promise<string> => {
     return currentAccessToken;
   }
 
-  sendTelegramNotify('Access token ใกล้หมดอายุหรือหมดแล้ว → Refresh...');
+  await sendTelegramNotify('Access token ใกล้หมดอายุหรือหมดแล้ว → Refresh...');
   try {
     await refreshToken();
     await initalFlatAPIConfig();
 
-    sendTelegramNotify('Refresh สำเร็จ! Expires at: ' + new Date(accessTokenExpiresAt).toISOString());
+    await sendTelegramNotify('Refresh สำเร็จ! Expires at: ' + new Date(accessTokenExpiresAt).toISOString());
     return currentAccessToken;
   } catch (error: any) {
-    sendTelegramNotify('Refresh ล้มเหลว ต้อง authorize ใหม่ ' + error.response?.data || error.message);
+    await sendTelegramNotify('Refresh ล้มเหลว ต้อง authorize ใหม่ ' + error.response?.data || error.message);
     throw error;
   }
 };
@@ -132,9 +132,9 @@ export const refreshToken = async (): Promise<TokenFleetTokenResponse> => {
 
     return newToken;
   } catch (error: any) {
-    sendTelegramNotify('Refresh token ล้มเหลว:' + error.response?.data || error.message);
+    await sendTelegramNotify('Refresh token ล้มเหลว:' + error.response?.data || error.message);
     if (error.response?.data?.error === 'login_required' || error.response?.data?.error === 'invalid_grant') {
-      sendTelegramNotify('refresh_token หมดอายุหรือ invalid ต้องทำ OAuth flow ใหม่ (authorize ใน browser)');
+      await sendTelegramNotify('refresh_token หมดอายุหรือ invalid ต้องทำ OAuth flow ใหม่ (authorize ใน browser)');
     }
 
     throw error;
