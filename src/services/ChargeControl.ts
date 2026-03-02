@@ -11,7 +11,6 @@ import { getValidToken, setChargeCurrent, initalFlatAPIConfig, updateCommandCoun
 
 const MIN_AMPS = 5;
 const MAX_AMPS = 32;
-const STEP = 1;
 
 const IMPORT_THRESHOLD = 130; // ถ้ามากกว่า > 120w จะต้องลด กระแสการชาร์จลง
 const ZERO_THRESHOLD = 60; // ถ้าน้อยกว่า < 50W จะต้องเพิ่มกระแสการชาร์จขึ้น
@@ -30,12 +29,14 @@ let lastSentAmps: number | null = null;
 
 let FLEET_API_COUNTER = 0;
 let lastResetDate = '';
+let resetProcessRunning = false;
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const formatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 const resetDailyCounter = async (): Promise<void> => {
   const today = new Date().toDateString();
-  if (lastResetDate !== '' && today !== lastResetDate) {
+  if (lastResetDate !== '' && today !== lastResetDate && !resetProcessRunning) {
+    resetProcessRunning = true;
     FLEET_API_COUNTER = 0;
     lastResetDate = today;
     await updateCommandCounter(0);
@@ -95,11 +96,12 @@ export const solarChargingControl = async (data: any): Promise<number> => {
       console.log('⏰ Outside time window');
       return FLEET_API_COUNTER;
     }
+    resetProcessRunning = false;
 
     let direction: 'UP' | 'DOWN' | null = null;
     let newAmps = currentAmps;
 
-    let actualStep = STEP;
+    let actualStep = 1; // ปรับทีละ 1A เป็นค่าเริ่มต้น
     if (avgGridPower > IMPORT_THRESHOLD) {
       if (avgGridPower > 500) actualStep = 2;
       if (avgGridPower > 2000) actualStep = 3;
@@ -138,6 +140,8 @@ export const solarChargingControl = async (data: any): Promise<number> => {
 };
 
 const setCurrent = async (newAmps: number, direction: 'UP' | 'DOWN', actualStep: number, avgGridPower: number, secondsSinceLastAdjust: number, data: any): Promise<boolean> => {
+  const { vehicle_current_a, grid_v } = data.tesla?.wallCharge;
+  const { charge_limit, soc } = data.tesla?.teslaMate;
   try {
     if (newAmps === lastSentAmps) {
       console.log(`Skip API (same amps ${newAmps})`);
@@ -155,9 +159,9 @@ const setCurrent = async (newAmps: number, direction: 'UP' | 'DOWN', actualStep:
 ✅ Set charging ${lastSentAmps}A to ${newAmps}A 
 Direction: ${direction === 'UP' ? '⬆️' : '⬇️'} (STEP: ${actualStep}A) ~ Grid: ${formatter.format(avgGridPower)} W 
 Daily Counter: ${FLEET_API_COUNTER} / ${MAX_DAILY_COMMANDS} per days
-Soc: ${data?.tesla.teslaMate.soc}% | Charged Limit: ${data?.tesla.teslaMate.charge_limit}% 
+Soc: ${soc}% | Charged Limit: ${charge_limit}% 
 ⏱ ${secondsSinceLastAdjust.toFixed(1)}s since last adjust
-Grid: ${data.tesla?.wallCharge.grid_v.toFixed(0)} V / ${data.tesla?.wallCharge.vehicle_current_a} A | Charging: ~ ${formatter.format(data.tesla.wallCharge.grid_v * data.tesla?.wallCharge.vehicle_current_a)} W
+Grid: ${grid_v.toFixed(0)} V / ${vehicle_current_a} A | Charging: ~ ${formatter.format(grid_v * vehicle_current_a)} W
 LastUpdate: ${toLocalDateTimeTH()}`);
     console.log(`-----------------------------------------------`);
     const success = await setChargeCurrent(newAmps);

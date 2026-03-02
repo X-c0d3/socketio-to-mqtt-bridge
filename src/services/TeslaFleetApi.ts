@@ -91,7 +91,6 @@ export const getValidToken = async (): Promise<string> => {
     await sendTelegramNotify('Refresh สำเร็จ! Expires at: ' + new Date(accessTokenExpiresAt).toISOString());
     return currentAccessToken;
   } catch (error: any) {
-    await sendTelegramNotify('Refresh ล้มเหลว ต้อง authorize ใหม่ ' + error.response?.data || error.message);
     throw error;
   }
 };
