@@ -79,9 +79,9 @@ export const getPartnerToken = async (): Promise<string> => {
 };
 
 export const getValidToken = async (): Promise<string> => {
-  // const REFRESH_BEFORE_MS = 30 * 60 * 1000;
+  const REFRESH_BEFORE_MS = 30 * 60 * 1000; // 30 นาที
   // Check token expiration
-  if (Date.now() < accessTokenExpiresAt - 1800000) {
+  if (Date.now() < accessTokenExpiresAt - REFRESH_BEFORE_MS) {
     return currentAccessToken;
   }
 

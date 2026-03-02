@@ -115,8 +115,7 @@ const toLocalDateTimeTH = () => {
 };
 
 const dateToLocalDateTimeTH = (date: Date) => {
-  const now = new Date();
-  return now.toLocaleString('en-GB', {
+  return date.toLocaleString('en-GB', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
