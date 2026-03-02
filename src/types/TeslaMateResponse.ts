@@ -18,6 +18,7 @@ export interface TeslaMateResponse {
   estimated_range_100: string;
   isLocked: boolean;
   isPluggedIn: boolean;
+  isOnline: boolean;
   lat?: number;
   lng?: number;
 
@@ -45,6 +46,7 @@ export const createEmptyTeslaMate = (): TeslaMateResponse => ({
   lastUpdate: '',
   isLocked: false,
   isPluggedIn: false,
+  isOnline: false,
 });
 
 export const getStatusName = (wallCharge: TeslaWallConnectorVitals | null): string => {

@@ -11,7 +11,7 @@ import https from 'https';
 import { AppConfig } from '../constants/Constants';
 import { TokenFleetTokenResponse } from '../types/TokenFleetTokenResponse';
 import { sendTelegramNotify } from '../util/TelegramNotify';
-import { getAuthorHeader } from '../util/Helper';
+import { dateToLocalDateTimeTH, getAuthorHeader } from '../util/Helper';
 
 axios.defaults.httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
@@ -21,6 +21,7 @@ var currentAccessToken = '';
 var currentRefreshToken = '';
 var accessTokenExpiresAt = 0;
 var dailyCounter = 0;
+let refreshTokenProcessRunning = false;
 
 const teslaProxyDomain = (endpoint: string) => `${AppConfig.TESLA_PROXY_BASE}/api/1/vehicles/${AppConfig.TESLA_VIN}/${endpoint}`;
 const teslaOauthDomain = () => `${AppConfig.TESLA_OAUTH_BASE}/oauth2/v3/token`;
@@ -79,18 +80,24 @@ export const getPartnerToken = async (): Promise<string> => {
 
 export const getValidToken = async (): Promise<string> => {
   // const REFRESH_BEFORE_MS = 30 * 60 * 1000;
+  // Check token expiration
   if (Date.now() < accessTokenExpiresAt - 1800000) {
     return currentAccessToken;
   }
 
-  await sendTelegramNotify('Access token ใกล้หมดอายุหรือหมดแล้ว → Refresh...');
   try {
-    await refreshToken();
-    await initalFlatAPIConfig();
+    if (!refreshTokenProcessRunning) {
+      refreshTokenProcessRunning = true;
+      await sendTelegramNotify('Access token has expired → Refresh...');
+      await refreshToken();
+      await initalFlatAPIConfig();
+      await sendTelegramNotify('Refresh success! Expires at: ' + dateToLocalDateTimeTH(new Date(accessTokenExpiresAt)));
+      refreshTokenProcessRunning = false;
+    }
 
-    await sendTelegramNotify('Refresh สำเร็จ! Expires at: ' + new Date(accessTokenExpiresAt).toISOString());
     return currentAccessToken;
   } catch (error: any) {
+    refreshTokenProcessRunning = false;
     throw error;
   }
 };

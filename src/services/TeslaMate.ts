@@ -152,6 +152,7 @@ const parseTeslaMateHtml = (dom: any): TeslaMateResponse => {
   tesla.lng = loc.lng;
 
   tesla.lastUpdate = toLocalDateTimeTH().replace(',', ' at');
+  tesla.isOnline = tesla.status.includes('online');
 
   return tesla;
 };
