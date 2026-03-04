@@ -10,6 +10,7 @@ import { JSDOM } from 'jsdom';
 import { createEmptyTeslaMate, TeslaMateResponse } from '../types/TeslaMateResponse';
 import { toLocalDateTimeTH } from '../util/Helper';
 
+const arrayStatus: string[] = ['offline', 'sleep'];
 const getRowValue = (document: Document, label: string): { value: string; tooltip: string } => {
   const rows = document.querySelectorAll('tbody tr');
 
@@ -58,6 +59,11 @@ const parseLocation = (document: Document): { lat?: number; lng?: number } => {
     lat: isFinite(lat) ? lat : undefined,
     lng: isFinite(lng) ? lng : undefined,
   };
+};
+
+const getModelName = (document: Document): string => {
+  const modelElement = document.querySelector('.media-content .subtitle');
+  return modelElement?.textContent?.replace(/\s+/g, ' ').trim() || '';
 };
 
 const extractTooltipsFromIcons = (document: Document): string[] => {
@@ -152,7 +158,8 @@ const parseTeslaMateHtml = (dom: any): TeslaMateResponse => {
   tesla.lng = loc.lng;
 
   tesla.lastUpdate = toLocalDateTimeTH().replace(',', ' at');
-  tesla.isOnline = tesla.status.includes('online');
+  tesla.isOnline = !arrayStatus.some(x => tesla?.status.toLowerCase().includes(x.toLowerCase()));
+  tesla.modelName = getModelName(document);
 
   return tesla;
 };

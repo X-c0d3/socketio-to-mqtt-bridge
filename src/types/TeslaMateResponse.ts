@@ -1,6 +1,7 @@
 import { TeslaWallConnectorVitals } from './TeslaWallConnector';
 
 export interface TeslaMateResponse {
+  modelName: string;
   status: string;
   remaining_time: string;
   expected_finish_time: string;
@@ -27,6 +28,7 @@ export interface TeslaMateResponse {
 }
 
 export const createEmptyTeslaMate = (): TeslaMateResponse => ({
+  modelName: '',
   remaining_time: '',
   expected_finish_time: '',
   range_rated: 0,
