@@ -157,6 +157,16 @@ export const getVehicleData = async (): Promise<any> => {
   }
 };
 
+export const wakeUp = async (): Promise<any> => {
+  try {
+    const response = await axios.post(teslaProxyDomain('wake_up'), {}, getAuthorHeader(currentAccessToken));
+    return response.data;
+  } catch (error: any) {
+    console.error('Error flashing lights:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
 //https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands
 export const setChargeCurrent = async (amps: number): Promise<boolean> => {
   try {
