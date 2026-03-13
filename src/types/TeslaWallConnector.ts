@@ -16,7 +16,8 @@ export interface TeslaWallConnectorVitals {
   voltageB_v: number;
   voltageC_v: number;
 
-  relay_coil_v: number;
+  relay_k1_v: number;
+  relay_k2_v: number;
 
   pcba_temp_c: number;
   handle_temp_c: number;
