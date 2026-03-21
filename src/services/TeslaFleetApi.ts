@@ -79,7 +79,7 @@ export const getPartnerToken = async (): Promise<string> => {
 };
 
 export const getValidToken = async (): Promise<string> => {
-  const REFRESH_BEFORE_MS = 30 * 60 * 1000; // 30 นาที
+  const REFRESH_BEFORE_MS = 30 * 60 * 1000; // refresh token 30 minutes before expiration
   // Check token expiration
   if (Date.now() < accessTokenExpiresAt - REFRESH_BEFORE_MS) {
     return currentAccessToken;
@@ -171,7 +171,7 @@ export const wakeUp = async (): Promise<any> => {
 export const setChargeCurrent = async (amps: number): Promise<boolean> => {
   try {
     const response = await axios.post(teslaProxyDomain('command/set_charging_amps'), { charging_amps: amps }, getAuthorHeader(currentAccessToken));
-    return response.data.response.result === true;
+    return response.data.response.result;
   } catch (error: any) {
     console.error('Error setting amps:', error.response?.data || error.message);
     throw error;
@@ -181,7 +181,7 @@ export const setChargeCurrent = async (amps: number): Promise<boolean> => {
 export const startCharged = async (): Promise<boolean> => {
   try {
     const response = await axios.post(teslaProxyDomain('command/charge_start'), {}, getAuthorHeader(currentAccessToken));
-    return response.data.response.result === true;
+    return response.data.response.result;
   } catch (error: any) {
     console.error('Error setting amps:', error.response?.data || error.message);
     throw error;
@@ -191,7 +191,7 @@ export const startCharged = async (): Promise<boolean> => {
 export const stopCharged = async (): Promise<boolean> => {
   try {
     const response = await axios.post(teslaProxyDomain('command/charge_stop'), {}, getAuthorHeader(currentAccessToken));
-    return response.data.response.result === true;
+    return response.data.response.result;
   } catch (error: any) {
     console.error('Error setting amps:', error.response?.data || error.message);
     throw error;
@@ -201,7 +201,7 @@ export const stopCharged = async (): Promise<boolean> => {
 export const actuateTrunk = async (trunk: 'front' | 'rear'): Promise<boolean> => {
   try {
     const response = await axios.post(teslaProxyDomain('command/actuate_trunk'), { which_trunk: trunk }, getAuthorHeader(currentAccessToken));
-    return response.data.response.result === true;
+    return response.data.response.result;
   } catch (error: any) {
     console.error('Error setting amps:', error.response?.data || error.message);
     throw error;
@@ -211,7 +211,7 @@ export const actuateTrunk = async (trunk: 'front' | 'rear'): Promise<boolean> =>
 export const flashLights = async (): Promise<boolean> => {
   try {
     const { data } = await axios.post(teslaProxyDomain('command/flash_lights'), {}, getAuthorHeader(currentAccessToken));
-    return data.response?.result === true;
+    return data.response?.result;
   } catch (error: any) {
     console.error('Error flashing lights:', error.response?.data || error.message);
     throw error;
