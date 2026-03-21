@@ -12,8 +12,8 @@ import { getValidToken, setChargeCurrent, initalFlatAPIConfig, updateCommandCoun
 const MIN_AMPS = 5;
 const MAX_AMPS = 32;
 
-const IMPORT_THRESHOLD = 130; // ถ้ามากกว่า > 120w จะต้องลด กระแสการชาร์จลง
-const ZERO_THRESHOLD = 60; // ถ้าน้อยกว่า < 50W จะต้องเพิ่มกระแสการชาร์จขึ้น
+const IMPORT_THRESHOLD = 130; // ถ้ามากกว่า > 130w จะต้องลด กระแสการชาร์จลง
+const ZERO_THRESHOLD = 60; // ถ้าน้อยกว่า < 60W จะต้องเพิ่มกระแสการชาร์จขึ้น
 
 const GRID_AVG_SAMPLES = 10;
 const ADJUST_DELAY = 40_000;
