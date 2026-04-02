@@ -51,12 +51,18 @@ export const createEmptyTeslaMate = (): TeslaMateResponse => ({
   isOnline: false,
 });
 
+// Wall Connector evse_state codes from actual API responses
+// (these differ from the EvseState enum which covers the documented subset)
 export const getStatusName = (wallCharge: TeslaWallConnectorVitals | null): string => {
   if (!wallCharge) return 'Unknown';
 
   switch (wallCharge.evse_state) {
     case 1:
       return 'Not Connected';
+    case 2:
+      return 'Ready';
+    case 3:
+      return 'Charging';
     case 4:
       return 'Finished';
     case 9:
