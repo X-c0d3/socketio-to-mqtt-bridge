@@ -7,7 +7,7 @@
 import axios from 'axios';
 import { AppConfig } from '../constants/Constants';
 
-const sendLineNotify = async (message: String): Promise<void> => {
+const sendLineNotify = async (message: string): Promise<void> => {
   const userIds = (AppConfig.LINE_SENDER_ID || '')
     .split(/[,]/)
     .map((s) => s.trim())

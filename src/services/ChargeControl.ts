@@ -7,19 +7,19 @@
 import { AppConfig } from '../constants/Constants';
 import { isInTimeWindow, toLocalDateTimeTH } from '../util/Helper';
 import { sendTelegramNotify } from '../util/TelegramNotify';
-import { getValidToken, setChargeCurrent, initalFlatAPIConfig, updateCommandCounter } from './TeslaFleetApi';
+import { getValidToken, setChargeCurrent, initialFleetAPIConfig, updateCommandCounter } from './TeslaFleetApi';
 
 const MIN_AMPS = 5;
 const MAX_AMPS = 32;
 
-const IMPORT_THRESHOLD = 130; // ถ้ามากกว่า > 130w จะต้องลด กระแสการชาร์จลง
-const ZERO_THRESHOLD = 60; // ถ้าน้อยกว่า < 60W จะต้องเพิ่มกระแสการชาร์จขึ้น
+const IMPORT_THRESHOLD = 130; // If > 130W, reduce charge amps
+const ZERO_THRESHOLD = 60; // If < 60W, increase charge amps
 
 const GRID_AVG_SAMPLES = 10;
 const ADJUST_DELAY = 40_000;
 
-// $10 สามารถใข้ได้: 10,000 commands (ถ้าใช้เฉพาะคำสั่ง vehicle-commands)
-// โค้ดปัจจุบัน MAX_DAILY_COMMANDS = 330 → 330 * 30 ≈ 9,900 commands/เดือน ≈ $9.90 → อยู่ภายในงบ $10 แต่เหลือ margin ต่ำ (~$0.10)
+// $10 budget: 10,000 commands (vehicle-commands tier)
+// MAX_DAILY_COMMANDS = 330 -> 330 * 30 = 9,900 commands/month = ~$9.90, within $10 budget
 const MAX_DAILY_COMMANDS = 330; // Limit qoata to 330 commands per day
 
 let currentAmps: number | null = null;
@@ -62,7 +62,7 @@ export const solarChargingControl = async (data: any): Promise<number> => {
     const { charge_limit, soc } = data?.tesla.teslaMate;
 
     if (currentAmps === null) {
-      let config = await initalFlatAPIConfig();
+      let config = await initialFleetAPIConfig();
       FLEET_API_COUNTER = config.dailyCounter;
       lastResetDate = new Date(config.lastUpdate).toDateString();
 
@@ -106,6 +106,7 @@ export const solarChargingControl = async (data: any): Promise<number> => {
       if (avgGridPower > 500) actualStep = 2;
       if (avgGridPower > 2000) actualStep = 3;
       if (avgGridPower > 4000) actualStep = 4;
+      if (avgGridPower > 6000) actualStep = 5;
 
       newAmps = clamp(currentAmps - actualStep, MIN_AMPS, MAX_AMPS);
       direction = 'DOWN';
@@ -170,8 +171,9 @@ LastUpdate: ${toLocalDateTimeTH()}`);
       await updateCommandCounter(FLEET_API_COUNTER);
     }
     return success;
-  } catch (error: any) {
-    await sendTelegramNotify('Error: ' + error.response?.data || error.message);
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: unknown }; message?: string };
+    await sendTelegramNotify('Error: ' + (err.response?.data || err.message));
     return false;
   }
 };

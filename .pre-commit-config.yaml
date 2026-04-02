@@ -4,4 +4,4 @@ repos:
     hooks:
     -   id: check-json
     -   id: no-commit-to-branch
-        args: ["--branch", "master"]
+        args: ["--branch", "main"]

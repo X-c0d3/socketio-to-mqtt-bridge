@@ -1,17 +1,11 @@
-declare module '*.svg';
-// declare module '*.jpg';
 declare module '*.png';
-declare module '*.svg';
-//   const src: string;
-//   export default src;
-// }
 
-declare module '*.json' {
-  const value: any;
-  export default value;
+declare module '*.svg' {
+  const src: string;
+  export default src;
 }
 
 declare module '*.jpg' {
-  const value: any;
+  const value: string;
   export default value;
 }

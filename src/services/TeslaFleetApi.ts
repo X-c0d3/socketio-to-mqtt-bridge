@@ -26,7 +26,7 @@ let refreshTokenProcessRunning = false;
 const teslaProxyDomain = (endpoint: string) => `${AppConfig.TESLA_PROXY_BASE}/api/1/vehicles/${AppConfig.TESLA_VIN}/${endpoint}`;
 const teslaOauthDomain = () => `${AppConfig.TESLA_OAUTH_BASE}/oauth2/v3/token`;
 
-export const initalFlatAPIConfig = async (): Promise<any> => {
+export const initialFleetAPIConfig = async (): Promise<any> => {
   if (!(await fs.pathExists(TOKEN_PATH))) {
     throw new Error('token.json not found');
   }
@@ -90,7 +90,7 @@ export const getValidToken = async (): Promise<string> => {
       refreshTokenProcessRunning = true;
       await sendTelegramNotify('Access token has expired → Refresh...');
       await refreshToken();
-      await initalFlatAPIConfig();
+      await initialFleetAPIConfig();
       await sendTelegramNotify('Refresh success! Expires at: ' + dateToLocalDateTimeTH(new Date(accessTokenExpiresAt)));
       refreshTokenProcessRunning = false;
     }

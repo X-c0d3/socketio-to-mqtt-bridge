@@ -7,7 +7,7 @@
 import axios from 'axios';
 import { AppConfig } from '../constants/Constants';
 
-const sendTelegramNotify = async (message: String): Promise<void> => {
+const sendTelegramNotify = async (message: string): Promise<void> => {
   console.log(message);
   await axios({
     method: 'post',
