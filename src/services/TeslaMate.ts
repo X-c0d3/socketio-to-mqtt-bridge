@@ -10,7 +10,8 @@ import { JSDOM } from 'jsdom';
 import { createEmptyTeslaMate, TeslaMateResponse } from '../types/TeslaMateResponse';
 import { toLocalDateTimeTH } from '../util/Helper';
 
-const arrayStatus: string[] = ['offline', 'sleep'];
+const notChargeStatus: string[] = ['offline', 'sleep'];
+const chargingStatus: string[] = ['charging'];
 const getRowValue = (document: Document, label: string): { value: string; tooltip: string } => {
   const rows = document.querySelectorAll('tbody tr');
 
@@ -158,7 +159,8 @@ const parseTeslaMateHtml = (dom: any): TeslaMateResponse => {
   tesla.lng = loc.lng;
 
   tesla.lastUpdate = toLocalDateTimeTH().replace(',', ' at');
-  tesla.isOnline = !arrayStatus.some(x => tesla?.status.toLowerCase().includes(x.toLowerCase()));
+  tesla.isOnline = !notChargeStatus.some(x => tesla?.status.toLowerCase().includes(x.toLowerCase()));
+  tesla.isCharging = chargingStatus.some(x => tesla?.status.toLowerCase().includes(x.toLowerCase()));
   tesla.modelName = getModelName(document);
 
   return tesla;

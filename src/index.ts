@@ -69,6 +69,15 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
       wallCharge.statusName = getStatusName(wallCharge);
     }
 
+    // Support charging status from TeslaMate when using Mobile Charger (Not wallcharger)
+    if (teslaMate && wallCharge && !wallCharge.contactor_closed && teslaMate?.isCharging) {
+      wallCharge.contactor_closed = true;
+      if (teslaMate?.charger_power) {
+        // Get vaule from testla mate in kW and convert to current in A (I = P / V), assume voltage is 230V
+        wallCharge.vehicle_current_a = Math.round((parseFloat(teslaMate?.charger_power.replace('kW', '')) * 1000 / 230) * 100) / 100;
+      }
+    }
+
     data = {
       ...data,
       tesla: {

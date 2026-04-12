@@ -20,6 +20,7 @@ export interface TeslaMateResponse {
   isLocked: boolean;
   isPluggedIn: boolean;
   isOnline: boolean;
+  isCharging: boolean;
   lat?: number;
   lng?: number;
 
@@ -49,6 +50,7 @@ export const createEmptyTeslaMate = (): TeslaMateResponse => ({
   isLocked: false,
   isPluggedIn: false,
   isOnline: false,
+  isCharging: false,
 });
 
 // Wall Connector evse_state codes from actual API responses
