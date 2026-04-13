@@ -8,6 +8,8 @@ import path from 'path';
 import fs from 'fs';
 import axios from 'axios';
 import https from 'https';
+import { LatLon, TeslaMateResponse } from '../types/TeslaMateResponse';
+import { AppConfig } from '../constants/Constants';
 
 const httpsAgent = new https.Agent({
   rejectUnauthorized: false,
@@ -136,4 +138,39 @@ const getAuthorHeader = (token: string) => {
   };
 };
 
-export { saveFile, ensureDirectoryExistence, extractText, removeSpecialCharacter, truncateString, toSafeNumber, getRandomValues, isInTimeWindow, toLocalDateTimeTH, getAuthorHeader, dateToLocalDateTimeTH };
+const getDistanceKm = (a: LatLon, b: LatLon) => {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLon = (b.lon - a.lon) * Math.PI / 180;
+
+  const lat1 = a.lat * Math.PI / 180;
+  const lat2 = b.lat * Math.PI / 180;
+
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) *
+    Math.cos(lat2) *
+    Math.sin(dLon / 2) ** 2;
+
+  return 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+const isAtHome = (testlaInfo: TeslaMateResponse | null): boolean => {
+  if (!testlaInfo?.lat || !testlaInfo?.lng) return true;
+
+  const raw = AppConfig.HOME_LOCATION;
+  if (!raw) throw new Error('HOME_LOCATION is not set');
+
+  const [h_lat, h_lon] = raw.split(',').map(v => parseFloat(v.trim()));
+
+  if (isNaN(h_lat) || isNaN(h_lon)) throw new Error('Invalid HOME_LOCATION format. Use "lat,lon"');
+
+  const homeLocation = { lat: h_lat, lon: h_lon };
+  const currentLocation = { lat: testlaInfo.lat, lon: testlaInfo.lng };
+  const distance = getDistanceKm(currentLocation, homeLocation);
+
+  const radiusKm = AppConfig.HOME_RADIUS_KM; //200 meters default radius
+  return distance < radiusKm;
+}
+
+export { saveFile, ensureDirectoryExistence, extractText, removeSpecialCharacter, truncateString, toSafeNumber, getRandomValues, isInTimeWindow, toLocalDateTimeTH, getAuthorHeader, dateToLocalDateTimeTH, getDistanceKm, isAtHome };

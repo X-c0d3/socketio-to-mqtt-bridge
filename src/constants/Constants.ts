@@ -44,6 +44,9 @@ const AppConfig = {
 
   CHARGE_HOUR_START: process.env.CHARGE_HOUR_START || 10,
   CHARGE_HOUR_END: process.env.CHARGE_HOUR_END || 16,
+
+  HOME_LOCATION: process.env.HOME_LOCATION || undefined,
+  HOME_RADIUS_KM: Number(process.env.HOME_RADIUS_KM || 0.2),  // 200 meters default radius
 };
 
 export { AppConfig };

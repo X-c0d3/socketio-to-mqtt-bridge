@@ -9,8 +9,8 @@ import { isInTimeWindow, toLocalDateTimeTH } from '../util/Helper';
 import { sendTelegramNotify } from '../util/TelegramNotify';
 import { getValidToken, setChargeCurrent, initialFleetAPIConfig, updateCommandCounter } from './TeslaFleetApi';
 
-const MIN_AMPS = 5;
-const MAX_AMPS = 32;
+let MIN_AMPS = 5;
+let MAX_AMPS = 32;
 
 const IMPORT_THRESHOLD = 130; // If > 130W, reduce charge amps
 const ZERO_THRESHOLD = 60; // If < 60W, increase charge amps
@@ -55,11 +55,14 @@ const getAverageGridPower = (value: number) => {
   return sum / gridHistory.length;
 };
 
-export const solarChargingControl = async (data: any): Promise<number> => {
+export const solarChargingControl = async (data: any, mobileCharger: boolean): Promise<number> => {
   try {
     const { vehicle_current_a, contactor_closed } = data?.tesla.wallCharge;
     const { grid_power, pv_power } = data?.deviceState;
     const { charge_limit, soc } = data?.tesla.teslaMate;
+
+    // for mobile charger, limit max amps to 13A (except Model 3/Y that can do 16A), for wall charger can go up to 32A
+    MAX_AMPS = mobileCharger ? 13 : 32;
 
     if (currentAmps === null) {
       let config = await initialFleetAPIConfig();

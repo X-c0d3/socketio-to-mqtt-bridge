@@ -12,7 +12,7 @@ import { TeslaWallConnectorVitals } from './types/TeslaWallConnector';
 import { getTeslaMateInfo } from './services/TeslaMate';
 import { getStatusName } from './types/TeslaMateResponse';
 import { solarChargingControl } from './services/ChargeControl';
-import { toLocalDateTimeTH } from './util/Helper';
+import { isAtHome, toLocalDateTimeTH } from './util/Helper';
 
 const lastPublishTime: any = {};
 const lastData: any = {};
@@ -58,6 +58,8 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
   const now = Date.now();
   const lastTime = lastPublishTime[deviceKey] || 0;
 
+  let isMobileCharger = false;
+  let outSideCharging = false;
   if (deviceKey === 'Huawei_SUN2000_10K_LC0') {
     var teslaMate = await getTeslaMateInfo();
     var wallCharge = await getWallConnector<TeslaWallConnectorVitals>('vitals');
@@ -75,6 +77,7 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
       if (teslaMate?.charger_power) {
         // Get vaule from testla mate in kW and convert to current in A (I = P / V), assume voltage is 230V
         wallCharge.vehicle_current_a = Math.round((parseFloat(teslaMate?.charger_power.replace('kW', '')) * 1000 / 230) * 100) / 100;
+        isMobileCharger = true;
       }
     }
 
@@ -89,6 +92,11 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
         //deviceInfo,
       },
     };
+
+    const isCharging = teslaMate?.isCharging;
+    const atHome = isAtHome(teslaMate);
+    //detect outside from location and charging status, if lat/lng is not available, fallback to contactor_closed status (which only works for wall charger, not mobile charger)
+    outSideCharging = !!(isCharging && !atHome);
   }
 
   lastData[deviceKey] = data;
@@ -98,8 +106,9 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
   }
 
   const sensorData = lastData[deviceKey];
-  if (deviceKey === 'Huawei_SUN2000_10K_LC0') {
-    sensorData.tesla.fleetApiCounter = await solarChargingControl(sensorData);
+  // Control solar charging only for wall charger and mobile charger with detected amps, not for outside charging (like using Tesla Mobile Connector at other location)
+  if (deviceKey === 'Huawei_SUN2000_10K_LC0' && !outSideCharging) {
+    sensorData.tesla.fleetApiCounter = await solarChargingControl(sensorData, isMobileCharger);
   }
 
   counter++;

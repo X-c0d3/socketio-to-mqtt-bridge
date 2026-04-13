@@ -53,6 +53,8 @@ export const createEmptyTeslaMate = (): TeslaMateResponse => ({
   isCharging: false,
 });
 
+export type LatLon = { lat: number; lon: number };
+
 // Wall Connector evse_state codes from actual API responses
 // (these differ from the EvseState enum which covers the documented subset)
 export const getStatusName = (wallCharge: TeslaWallConnectorVitals | null): string => {
