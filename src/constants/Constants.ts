@@ -47,6 +47,11 @@ const AppConfig = {
 
   HOME_LOCATION: process.env.HOME_LOCATION || undefined,
   HOME_RADIUS_KM: Number(process.env.HOME_RADIUS_KM || 0.2),  // 200 meters default radius
+
+  GRID_AVG_SAMPLES: Number(process.env.GRID_AVG_SAMPLES || 10),
+  IMPORT_THRESHOLD: Number(process.env.IMPORT_THRESHOLD || 130),
+  ZERO_THRESHOLD: Number(process.env.ZERO_THRESHOLD || 65),
+  ADJUST_DELAY: Number(process.env.ADJUST_DELAY || 40000),
 };
 
 export { AppConfig };

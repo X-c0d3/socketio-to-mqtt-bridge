@@ -12,12 +12,6 @@ import { getValidToken, setChargeCurrent, initialFleetAPIConfig, updateCommandCo
 let MIN_AMPS = 5;
 let MAX_AMPS = 32;
 
-const IMPORT_THRESHOLD = 130; // If > 130W, reduce charge amps
-const ZERO_THRESHOLD = 60; // If < 60W, increase charge amps
-
-const GRID_AVG_SAMPLES = 10;
-const ADJUST_DELAY = 40_000;
-
 // $10 budget: 10,000 commands (vehicle-commands tier)
 // MAX_DAILY_COMMANDS = 330 -> 330 * 30 = 9,900 commands/month = ~$9.90, within $10 budget
 const MAX_DAILY_COMMANDS = 330; // Limit qoata to 330 commands per day
@@ -47,7 +41,7 @@ const resetDailyCounter = async (): Promise<void> => {
 const getAverageGridPower = (value: number) => {
   gridHistory.push(value);
 
-  if (gridHistory.length > GRID_AVG_SAMPLES) {
+  if (gridHistory.length > AppConfig.GRID_AVG_SAMPLES) {
     gridHistory.shift();
   }
 
@@ -80,10 +74,11 @@ export const solarChargingControl = async (data: any, mobileCharger: boolean): P
     await resetDailyCounter();
 
     currentAmps = Math.round(vehicle_current_a ?? 0);
+    console.log(`Running solar charging control, MAX_AMPS: ${MAX_AMPS}A, MobileCharger:${mobileCharger}, CurrentAmps:${currentAmps}A , (ZERO_THRESHOLD:${AppConfig.ZERO_THRESHOLD}A / IMPORT_THRESHOLD:${AppConfig.IMPORT_THRESHOLD}A)`);
     const avgGridPower = getAverageGridPower((grid_power ?? 0) * 1000);
 
     const now = Date.now();
-    if (now - lastAdjustTime < ADJUST_DELAY) {
+    if (now - lastAdjustTime < AppConfig.ADJUST_DELAY) {
       // รอให้ครบ delay ก่อนปรับ
       return FLEET_API_COUNTER;
     }
@@ -105,7 +100,7 @@ export const solarChargingControl = async (data: any, mobileCharger: boolean): P
     let newAmps = currentAmps;
 
     let actualStep = 1; // ปรับทีละ 1A เป็นค่าเริ่มต้น
-    if (avgGridPower > IMPORT_THRESHOLD) {
+    if (avgGridPower > AppConfig.IMPORT_THRESHOLD) {
       if (avgGridPower > 500) actualStep = 2;
       if (avgGridPower > 2000) actualStep = 3;
       if (avgGridPower > 4000) actualStep = 4;
@@ -113,7 +108,7 @@ export const solarChargingControl = async (data: any, mobileCharger: boolean): P
 
       newAmps = clamp(currentAmps - actualStep, MIN_AMPS, MAX_AMPS);
       direction = 'DOWN';
-    } else if (Math.abs(avgGridPower) < ZERO_THRESHOLD) {
+    } else if (Math.abs(avgGridPower) < AppConfig.ZERO_THRESHOLD) {
       newAmps = clamp(currentAmps + actualStep, MIN_AMPS, MAX_AMPS);
       direction = 'UP';
     }
@@ -124,7 +119,7 @@ export const solarChargingControl = async (data: any, mobileCharger: boolean): P
       newAmps = MAX_AMPS;
     }
 
-    if (direction && newAmps !== currentAmps && gridHistory.length >= GRID_AVG_SAMPLES) {
+    if (direction && newAmps !== currentAmps && gridHistory.length >= AppConfig.GRID_AVG_SAMPLES) {
       const secondsSinceLastAdjust = (now - lastAdjustTime) / 1000;
 
       lastAdjustTime = now;

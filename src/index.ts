@@ -89,7 +89,7 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
         fleetApiCounter: 0,
         // wifi_status,
         // lifetime,
-        //deviceInfo,
+        // deviceInfo,
       },
     };
 
