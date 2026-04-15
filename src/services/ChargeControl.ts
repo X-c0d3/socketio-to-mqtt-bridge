@@ -74,7 +74,7 @@ export const solarChargingControl = async (data: any, mobileCharger: boolean): P
     await resetDailyCounter();
 
     currentAmps = Math.round(vehicle_current_a ?? 0);
-    console.log(`Running solar charging control, MAX_AMPS: ${MAX_AMPS}A, MobileCharger:${mobileCharger}, CurrentAmps:${currentAmps}A , (ZERO_THRESHOLD:${AppConfig.ZERO_THRESHOLD}A / IMPORT_THRESHOLD:${AppConfig.IMPORT_THRESHOLD}A)`);
+    console.log(`Running solar charging control, MAX_AMPS: ${MAX_AMPS}A, MobileCharger:${mobileCharger}, CurrentAmps:${currentAmps}A , (ZERO_THRESHOLD:${AppConfig.ZERO_THRESHOLD}w / IMPORT_THRESHOLD:${AppConfig.IMPORT_THRESHOLD}w)`);
     const avgGridPower = getAverageGridPower((grid_power ?? 0) * 1000);
 
     const now = Date.now();
