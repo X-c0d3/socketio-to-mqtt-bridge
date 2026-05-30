@@ -49,14 +49,25 @@ const getAverageGridPower = (value: number) => {
   return sum / gridHistory.length;
 };
 
+const getDefaultMinAmps = (): number => {
+  const day = new Date().toLocaleDateString('en-US', {
+    timeZone: 'Asia/Bangkok',
+    weekday: 'short'
+  });
+  // TOU Saturday and Sunday, set default min amps to 20A
+  return day === 'Sat' || day === 'Sun' ? 13 : 5;
+};
+
 export const solarChargingControl = async (data: any, mobileCharger: boolean): Promise<number> => {
   try {
     const { vehicle_current_a, contactor_closed } = data?.tesla.wallCharge;
     const { grid_power, pv_power } = data?.deviceState;
     const { charge_limit, soc } = data?.tesla.teslaMate;
 
+    MIN_AMPS = getDefaultMinAmps();
     // for mobile charger, limit max amps to 13A (except Model 3/Y that can do 16A), for wall charger can go up to 32A
     MAX_AMPS = mobileCharger ? 13 : 32;
+
 
     if (currentAmps === null) {
       let config = await initialFleetAPIConfig();
@@ -66,7 +77,8 @@ export const solarChargingControl = async (data: any, mobileCharger: boolean): P
       const actualAmps = Math.round(vehicle_current_a ?? 0);
 
       currentAmps = actualAmps <= MIN_AMPS ? MIN_AMPS : actualAmps;
-      lastSentAmps = actualAmps <= MIN_AMPS ? MIN_AMPS : actualAmps;
+      lastSentAmps = actualAmps;
+      console.log(`Initial lastSentAmps ${lastSentAmps} A ( Current MIN_AMPS: ${MIN_AMPS} A) / ${actualAmps} A from Tesla API`);
       await sendTelegramNotify(`🔄 Starting amps sync. Detected current from WallConnector: ${currentAmps}A`);
       return FLEET_API_COUNTER;
     }
@@ -74,7 +86,7 @@ export const solarChargingControl = async (data: any, mobileCharger: boolean): P
     await resetDailyCounter();
 
     currentAmps = Math.round(vehicle_current_a ?? 0);
-    console.log(`Running solar charging control, MAX_AMPS: ${MAX_AMPS}A, MobileCharger:${mobileCharger}, CurrentAmps:${currentAmps}A , (ZERO_THRESHOLD:${AppConfig.ZERO_THRESHOLD}w / IMPORT_THRESHOLD:${AppConfig.IMPORT_THRESHOLD}w)`);
+    console.log(`Running solar charging control, MIN_AMPS: ${MIN_AMPS} A, MAX_AMPS: ${MAX_AMPS} A, MobileCharger:${mobileCharger}, CurrentAmps:${currentAmps} A , (ZERO_THRESHOLD:${AppConfig.ZERO_THRESHOLD} w / IMPORT_THRESHOLD:${AppConfig.IMPORT_THRESHOLD} w)`);
     const avgGridPower = getAverageGridPower((grid_power ?? 0) * 1000);
 
     const now = Date.now();
@@ -99,12 +111,13 @@ export const solarChargingControl = async (data: any, mobileCharger: boolean): P
     let direction: 'UP' | 'DOWN' | null = null;
     let newAmps = currentAmps;
 
-    let actualStep = 1; // ปรับทีละ 1A เป็นค่าเริ่มต้น
+    let actualStep = 1; // default step is 1A, can increase if grid power is significantly above threshold to be more aggressive in reducing load
     if (avgGridPower > AppConfig.IMPORT_THRESHOLD) {
       if (avgGridPower > 500) actualStep = 2;
       if (avgGridPower > 2000) actualStep = 3;
       if (avgGridPower > 4000) actualStep = 4;
       if (avgGridPower > 6000) actualStep = 5;
+      if (avgGridPower > 7000) actualStep = 6;
 
       newAmps = clamp(currentAmps - actualStep, MIN_AMPS, MAX_AMPS);
       direction = 'DOWN';
