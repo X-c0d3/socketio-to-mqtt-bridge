@@ -13,9 +13,11 @@ import { getTeslaMateInfo } from './services/TeslaMate';
 import { getStatusName } from './types/TeslaMateResponse';
 import { solarChargingControl } from './services/ChargeControl';
 import { isAtHome, toLocalDateTimeTH } from './util/Helper';
+import { sendTelegramNotify } from './util/TelegramNotify';
 
 const lastPublishTime: any = {};
 const lastData: any = {};
+const lastNotifyDate: any = {};
 
 // MQTT Client
 const mqttClient = mqtt.connect(AppConfig.MQTT_BROKER || '', {
@@ -110,6 +112,17 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
   if (deviceKey === 'Huawei_SUN2000_10K_LC0' && !outSideCharging) {
     sensorData.tesla.fleetApiCounter = await solarChargingControl(sensorData, isMobileCharger);
   }
+
+
+  if (deviceKey === 'LVTOPSUN_BATTERY') {
+    const today = new Date().toDateString();
+    if (sensorData.deviceState.soc <= 30 && lastNotifyDate[deviceKey] !== today) {
+      lastNotifyDate[deviceKey] = today;
+      sendTelegramNotify(`Battery SOC is low: ${sensorData.deviceState.soc}%, the system will stopping discharging soon.`);
+    }
+  }
+
+
 
   counter++;
   //console.log('Received from Socket.IO:', sensorData);
