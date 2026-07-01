@@ -53,6 +53,7 @@ socket.on('connect_error', (err: any) => {
 });
 
 var counter = 0;
+let batteryDischargePower = 0;
 socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
   const deviceKey = data.deviceName?.replace(/[^a-zA-Z0-9]/g, '_');
   if (!deviceKey) return;
@@ -108,21 +109,24 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
   }
 
   const sensorData = lastData[deviceKey];
-  // Control solar charging only for wall charger and mobile charger with detected amps, not for outside charging (like using Tesla Mobile Connector at other location)
-  if (deviceKey === 'Huawei_SUN2000_10K_LC0' && !outSideCharging) {
-    sensorData.tesla.fleetApiCounter = await solarChargingControl(sensorData, isMobileCharger);
-  }
-
 
   if (deviceKey === 'LVTOPSUN_BATTERY') {
     const today = new Date().toDateString();
+    if (sensorData.deviceState.isDischarging) {
+      batteryDischargePower = sensorData.deviceState.isDischarging ? Math.abs(sensorData.deviceState.energy) : 0;
+      console.log('Battery discharge power:', batteryDischargePower);
+    }
+
     if (sensorData.deviceState.soc <= 30 && lastNotifyDate[deviceKey] !== today) {
       lastNotifyDate[deviceKey] = today;
       sendTelegramNotify(`Battery SOC is low: ${sensorData.deviceState.soc}%, the system will stopping discharging soon.`);
     }
   }
 
-
+  // Control solar charging only for wall charger and mobile charger with detected amps, not for outside charging (like using Tesla Mobile Connector at other location)
+  if (deviceKey === 'Huawei_SUN2000_10K_LC0' && !outSideCharging) {
+    sensorData.tesla.fleetApiCounter = await solarChargingControl(sensorData, batteryDischargePower, isMobileCharger);
+  }
 
   counter++;
   //console.log('Received from Socket.IO:', sensorData);

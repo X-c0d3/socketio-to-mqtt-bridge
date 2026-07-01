@@ -58,7 +58,7 @@ const getDefaultMinAmps = (): number => {
   return day === 'Sat' || day === 'Sun' ? 13 : 5;
 };
 
-export const solarChargingControl = async (data: any, mobileCharger: boolean): Promise<number> => {
+export const solarChargingControl = async (data: any, batteryDischargePower: number, mobileCharger: boolean): Promise<number> => {
   try {
     const { vehicle_current_a, contactor_closed } = data?.tesla.wallCharge;
     const { grid_power, pv_power } = data?.deviceState;
@@ -87,7 +87,13 @@ export const solarChargingControl = async (data: any, mobileCharger: boolean): P
 
     currentAmps = Math.round(vehicle_current_a ?? 0);
     console.log(`Running solar charging control, MIN_AMPS: ${MIN_AMPS} A, MAX_AMPS: ${MAX_AMPS} A, MobileCharger:${mobileCharger}, CurrentAmps:${currentAmps} A , (ZERO_THRESHOLD:${AppConfig.ZERO_THRESHOLD} w / IMPORT_THRESHOLD:${AppConfig.IMPORT_THRESHOLD} w)`);
-    const avgGridPower = getAverageGridPower((grid_power ?? 0) * 1000);
+
+    let powerImporting = (grid_power ?? 0) * 1000;
+    if (batteryDischargePower > powerImporting) {
+      powerImporting = batteryDischargePower;
+    }
+    console.log(`Power Importing: ${formatter.format(powerImporting)} W, Battery Discharge: ${formatter.format(batteryDischargePower)} W`);
+    const avgGridPower = getAverageGridPower(powerImporting);
 
     const now = Date.now();
     if (now - lastAdjustTime < AppConfig.ADJUST_DELAY) {
