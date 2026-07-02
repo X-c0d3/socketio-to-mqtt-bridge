@@ -109,12 +109,11 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
   }
 
   const sensorData = lastData[deviceKey];
-
   if (deviceKey === 'LVTOPSUN_BATTERY') {
+    batteryDischargePower = 0;
     const today = new Date().toDateString();
     if (sensorData.deviceState.isDischarging) {
       batteryDischargePower = sensorData.deviceState.isDischarging ? Math.abs(sensorData.deviceState.energy) : 0;
-      console.log('Battery discharge power:', batteryDischargePower);
     }
 
     if (sensorData.deviceState.soc <= 30 && lastNotifyDate[deviceKey] !== today) {
@@ -131,7 +130,7 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
   counter++;
   //console.log('Received from Socket.IO:', sensorData);
   const topic = `${AppConfig.MQTT_TOPIC_BASE}/${deviceKey}/state`;
-  console.log(toLocalDateTimeTH(), `[${counter}] Publish to MQTT topic:`, topic);
+  //console.log(toLocalDateTimeTH(), `[${counter}] Publish to MQTT topic:`, topic);
 
   //Publish to MQTT
   mqttClient.publish(topic, JSON.stringify(sensorData), { qos: 1, retain: true }, (err) => {
