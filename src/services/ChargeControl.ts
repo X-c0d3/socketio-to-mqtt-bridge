@@ -55,7 +55,7 @@ const getDefaultMinAmps = (): number => {
     weekday: 'short'
   });
   // TOU Saturday and Sunday, set default min amps to 20A
-  return day === 'Sat' || day === 'Sun' ? 13 : 5;
+  return day === 'Sat' || day === 'Sun' ? 10 : 5;
 };
 
 export const solarChargingControl = async (data: any, batteryDischargePower: number, mobileCharger: boolean): Promise<number> => {
@@ -66,7 +66,7 @@ export const solarChargingControl = async (data: any, batteryDischargePower: num
 
     MIN_AMPS = getDefaultMinAmps();
     // for mobile charger, limit max amps to 13A (except Model 3/Y that can do 16A), for wall charger can go up to 32A
-    MAX_AMPS = mobileCharger ? 13 : 32;
+    MAX_AMPS = mobileCharger ? 13 : 16;
 
 
     if (currentAmps === null) {
@@ -88,10 +88,10 @@ export const solarChargingControl = async (data: any, batteryDischargePower: num
     currentAmps = Math.round(vehicle_current_a ?? 0);
     console.log(`Running solar charging control, MIN_AMPS: ${MIN_AMPS} A, MAX_AMPS: ${MAX_AMPS} A, MobileCharger:${mobileCharger}, CurrentAmps:${currentAmps} A , (ZERO_THRESHOLD:${AppConfig.ZERO_THRESHOLD} w / IMPORT_THRESHOLD:${AppConfig.IMPORT_THRESHOLD} w)`);
 
-    let powerImporting = (grid_power ?? 0) * 1000;
-    powerImporting = (batteryDischargePower > powerImporting) ? batteryDischargePower : powerImporting;
+    let gridPowerFinal = (grid_power ?? 0) * 1000;
+    let powerImporting = (batteryDischargePower > gridPowerFinal) ? batteryDischargePower : gridPowerFinal;
     const avgGridPower = getAverageGridPower(powerImporting);
-    console.log(`Power Importing: ${formatter.format(powerImporting)} W, Battery Discharge: ${formatter.format(batteryDischargePower)} W`);
+    console.log(`Grid Importing: ${formatter.format(gridPowerFinal)} W, Battery Discharge: ${formatter.format(batteryDischargePower)} W`);
 
     const now = Date.now();
     if (now - lastAdjustTime < AppConfig.ADJUST_DELAY) {
