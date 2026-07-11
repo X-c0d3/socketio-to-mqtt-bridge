@@ -88,7 +88,7 @@ export const solarChargingControl = async (data: any, batteryDischargePower: num
     currentAmps = Math.round(vehicle_current_a ?? 0);
     console.log(`Running solar charging control, MIN_AMPS: ${MIN_AMPS} A, MAX_AMPS: ${MAX_AMPS} A, MobileCharger:${mobileCharger}, CurrentAmps:${currentAmps} A , (ZERO_THRESHOLD:${AppConfig.ZERO_THRESHOLD} w / IMPORT_THRESHOLD:${AppConfig.IMPORT_THRESHOLD} w)`);
 
-    let gridPowerFinal = (grid_power ?? 0) * 1000;
+    let gridPowerFinal = (Math.abs(grid_power) ?? 0) * 1000;
     let powerImporting = (batteryDischargePower > gridPowerFinal) ? batteryDischargePower : gridPowerFinal;
     const avgGridPower = getAverageGridPower(powerImporting);
     console.log(`Grid Importing: ${formatter.format(gridPowerFinal)} W, Battery Discharge: ${formatter.format(batteryDischargePower)} W`);
