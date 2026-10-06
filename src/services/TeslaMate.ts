@@ -54,18 +54,18 @@ const parseLocation = (document: Document): { lat?: number; lng?: number } => {
   const input = document.querySelector('input[id^="position_"]') as HTMLInputElement | null;
   if (!input?.value) return {};
 
-  const coordinates = input.value.split(',').map(value => value.trim());
-  if (coordinates.length !== 2 || coordinates.some(value => value === '')) return {};
-  const [lat, lng] = coordinates.map(Number);
+  const [lat, lng] = input.value.split(',').map(Number);
 
   return {
-    lat: Number.isFinite(lat) && Math.abs(lat) <= 90 ? lat : undefined,
-    lng: Number.isFinite(lng) && Math.abs(lng) <= 180 ? lng : undefined,
+    lat: isFinite(lat) ? lat : undefined,
+    lng: isFinite(lng) ? lng : undefined,
   };
 };
 
 const getDistanceFromHomeKm = (lat?: number, lng?: number): number | null => {
   if (lat === undefined || lng === undefined) return null;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)
+    || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
   const coordinates = AppConfig.HOME_LOCATION?.split(',').map(value => value.trim());
   if (!coordinates) return null;
   if (coordinates.length !== 2 || coordinates.some(value => value === '')) {
