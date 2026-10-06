@@ -12,6 +12,7 @@ import { getDistanceKm, toLocalDateTimeTH } from '../util/Helper';
 
 const notChargeStatus: string[] = ['offline', 'sleep'];
 const chargingStatus: string[] = ['charging'];
+let lastDistanceFromHomeKm: number | null = null;
 const getRowValue = (document: Document, label: string): { value: string; tooltip: string } => {
   const rows = document.querySelectorAll('tbody tr');
 
@@ -216,7 +217,7 @@ const parseTeslaMateHtml = (dom: any): TeslaMateResponse => {
   const loc = parseLocation(document);
   tesla.lat = loc.lat;
   tesla.lng = loc.lng;
-  tesla.distanceFromHomeKm = getDistanceFromHomeKm(loc.lat, loc.lng);
+  tesla.distanceFromHomeKm = lastDistanceFromHomeKm;
 
   tesla.lastUpdate = toLocalDateTimeTH().replace(',', ' at');
   tesla.isOnline = !notChargeStatus.some(x => tesla?.status.toLowerCase().includes(x.toLowerCase()));
@@ -237,8 +238,14 @@ const getTeslaMateInfo = async (): Promise<TeslaMateResponse | null> => {
 
     const dom = new JSDOM(res.data);
     const tesla = parseTeslaMateHtml(dom);
-    const distance = await getPreferredDistanceFromHomeKm(tesla.lat, tesla.lng);
-    tesla.distanceFromHomeKm = distance === null ? null : Number(distance.toFixed(3));
+    const isMoving = typeof tesla.speed === 'number' && Number.isFinite(tesla.speed) && tesla.speed > 0;
+    if (isMoving) {
+      const distance = await getPreferredDistanceFromHomeKm(tesla.lat, tesla.lng);
+      if (distance !== null) {
+        lastDistanceFromHomeKm = Number(distance.toFixed(3));
+      }
+    }
+    tesla.distanceFromHomeKm = lastDistanceFromHomeKm;
     return tesla;
   } catch (err) {
     console.error(err);
