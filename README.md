@@ -1,9 +1,12 @@
 ## TeslaMate distance from home
 
-`distanceFromHomeKm` uses OSRM road distance by default and falls back to the
-existing Haversine calculation if OSRM is unavailable, times out, has no route,
+`distanceFromHomeKm` uses OSRM road distance only when TeslaMate speed is a
+finite number greater than zero. When parked or speed is unavailable, it retains
+the last distance without calling OSRM or recalculating Haversine. The cache is
+in memory and starts as null after restart; other TeslaMate fields still update. While
+moving, it falls back to Haversine if OSRM is unavailable, times out, has no route,
 or cannot find a road within 200 meters of either endpoint. Invalid vehicle or
-home coordinates yield `null`. Existing `lat` / `lng` parsing is unchanged.
+home coordinates preserve the last distance (or null if none exists). Existing `lat` / `lng` parsing is unchanged.
 
 Configure these in the bridge environment (separate from the OSRM stack):
 
