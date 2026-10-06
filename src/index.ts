@@ -17,7 +17,8 @@ import { sendTelegramNotify } from './util/TelegramNotify';
 
 const lastPublishTime: any = {};
 const lastData: any = {};
-const lastNotifyDate: any = {};
+const LOW_BATTERY_SOC_THRESHOLD = 25;
+const lowBatteryNotified = new Set<string>();
 
 // MQTT Client
 const mqttClient = mqtt.connect(AppConfig.MQTT_BROKER || '', {
@@ -111,15 +112,20 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
   const sensorData = lastData[deviceKey];
   if (deviceKey === 'LVTOPSUN_BATTERY') {
     batteryDischargePower = 0;
-    const today = new Date().toDateString();
     // need to add SOC in condition when battery less than 90%
     if (sensorData.deviceState.isDischarging && sensorData.deviceState.soc < 90) {
       batteryDischargePower = sensorData.deviceState.isDischarging ? Math.abs(sensorData.deviceState.energy) : 0;
     }
 
-    if (sensorData.deviceState.soc <= 30 && lastNotifyDate[deviceKey] !== today) {
-      lastNotifyDate[deviceKey] = today;
-      sendTelegramNotify(`Battery SOC is low: ${sensorData.deviceState.soc}%, the system will stopping discharging soon.`);
+    const soc = sensorData.deviceState.soc;
+    if (typeof soc === 'number' && Number.isFinite(soc) && soc >= 0 && soc <= 100) {
+      if (soc < LOW_BATTERY_SOC_THRESHOLD && !lowBatteryNotified.has(deviceKey)) {
+        // Latch before sending so overlapping events cannot notify twice.
+        lowBatteryNotified.add(deviceKey);
+        void sendTelegramNotify(`Battery charge has dropped below ${LOW_BATTERY_SOC_THRESHOLD}% (currently ${soc}%). The system will stop battery discharge.`);
+      } else if (soc >= LOW_BATTERY_SOC_THRESHOLD) {
+        lowBatteryNotified.delete(deviceKey);
+      }
     }
   }
 
