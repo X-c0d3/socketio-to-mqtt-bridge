@@ -8,7 +8,7 @@ import axios from 'axios';
 import { AppConfig } from '../constants/Constants';
 import { JSDOM } from 'jsdom';
 import { createEmptyTeslaMate, TeslaMateResponse } from '../types/TeslaMateResponse';
-import { toLocalDateTimeTH } from '../util/Helper';
+import { getDistanceKm, toLocalDateTimeTH } from '../util/Helper';
 
 const notChargeStatus: string[] = ['offline', 'sleep'];
 const chargingStatus: string[] = ['charging'];
@@ -54,12 +54,33 @@ const parseLocation = (document: Document): { lat?: number; lng?: number } => {
   const input = document.querySelector('input[id^="position_"]') as HTMLInputElement | null;
   if (!input?.value) return {};
 
-  const [lat, lng] = input.value.split(',').map(Number);
+  const coordinates = input.value.split(',').map(value => value.trim());
+  if (coordinates.length !== 2 || coordinates.some(value => value === '')) return {};
+  const [lat, lng] = coordinates.map(Number);
 
   return {
-    lat: isFinite(lat) ? lat : undefined,
-    lng: isFinite(lng) ? lng : undefined,
+    lat: Number.isFinite(lat) && Math.abs(lat) <= 90 ? lat : undefined,
+    lng: Number.isFinite(lng) && Math.abs(lng) <= 180 ? lng : undefined,
   };
+};
+
+const getDistanceFromHomeKm = (lat?: number, lng?: number): number | null => {
+  if (lat === undefined || lng === undefined) return null;
+  const coordinates = AppConfig.HOME_LOCATION?.split(',').map(value => value.trim());
+  if (!coordinates) return null;
+  if (coordinates.length !== 2 || coordinates.some(value => value === '')) {
+    console.warn('Invalid HOME_LOCATION format. Use "lat,lon"');
+    return null;
+  }
+
+  const [homeLat, homeLon] = coordinates.map(Number);
+  if (!Number.isFinite(homeLat) || !Number.isFinite(homeLon)
+    || Math.abs(homeLat) > 90 || Math.abs(homeLon) > 180) {
+    console.warn('Invalid HOME_LOCATION coordinates');
+    return null;
+  }
+
+  return getDistanceKm({ lat, lon: lng }, { lat: homeLat, lon: homeLon });
 };
 
 const getModelName = (document: Document): string => {
@@ -157,6 +178,7 @@ const parseTeslaMateHtml = (dom: any): TeslaMateResponse => {
   const loc = parseLocation(document);
   tesla.lat = loc.lat;
   tesla.lng = loc.lng;
+  tesla.distanceFromHomeKm = getDistanceFromHomeKm(loc.lat, loc.lng);
 
   tesla.lastUpdate = toLocalDateTimeTH().replace(',', ' at');
   tesla.isOnline = !notChargeStatus.some(x => tesla?.status.toLowerCase().includes(x.toLowerCase()));

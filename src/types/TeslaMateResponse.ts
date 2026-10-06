@@ -23,6 +23,7 @@ export interface TeslaMateResponse {
   isCharging: boolean;
   lat?: number;
   lng?: number;
+  distanceFromHomeKm: number | null; // Straight-line distance; null when coordinates are unavailable.
 
   version: string;
   lastUpdate: string;
@@ -51,6 +52,7 @@ export const createEmptyTeslaMate = (): TeslaMateResponse => ({
   isPluggedIn: false,
   isOnline: false,
   isCharging: false,
+  distanceFromHomeKm: null,
 });
 
 export type LatLon = { lat: number; lon: number };
