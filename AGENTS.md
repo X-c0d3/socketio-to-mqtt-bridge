@@ -53,6 +53,7 @@ Keep environment secrets private, prefer deterministic commands, and document an
 - Formatters/lints are not configured; if you introduce ESLint/Prettier add scripts named `lint` / `format` and document their usage here.
 - Docker build: `docker build -t mqtt-bridge .`
 - Docker Compose (mounts persistent token): `docker compose up --build`
+- Standalone regional routing: manually place a PBF in `OSRM_DATA_DIR` (default `./data/osrm-bangkok`) named `${OSRM_MAP_NAME}.osm.pbf` (default stem `thailand-latest`, retained for compatibility with the earlier wget command). Run `docker compose -f docker-compose.osrm.yml up -d`; prepares car-profile MLD data with 2 threads and serves on host port 3002 by default. The marker is `${OSRM_MAP_NAME}.ready`; remove it after replacing a map. Coverage depends on the downloaded extract, not its filename. See README. This stack does not download maps or alter bridge distance calculation.
 
 ## RUNTIME & CONFIG BASICS
 - Config lives in `.env.local` (preferred) or `.env`; loader logs which file is used (`src/constants/Constants.ts`).
@@ -70,7 +71,7 @@ Keep environment secrets private, prefer deterministic commands, and document an
 - `src/constants/Constants.ts`: env loader and `AppConfig` definition.
 - `src/services/Wallconnector.ts`: pulls Wall Connector vitals.
 - `src/services/TeslaMate.ts`: scrapes TeslaMate UI, returning structured data.
-- TeslaMate responses include `distanceFromHomeKm`, the straight-line Haversine distance from vehicle coordinates to `HOME_LOCATION`, in kilometers. It is `null` when vehicle/home coordinates are missing or invalid; zero is a valid distance. Coordinates are validated without logging their values.
+- TeslaMate `distanceFromHomeKm` prefers OSRM road distance (meters converted to kilometers), falling back to `getDistanceFromHomeKm` on timeout, errors, missing routes, or unavailable road coverage. `OSRM_URL` defaults to `http://localhost:3002`, timeout to 2000ms, and maximum snapping distance to 200m (`OSRM_MAX_SNAP_DISTANCE_METERS`). This snapping limit detects unavailable coverage, not an exact map polygon: points near an extract boundary may still snap inside. Invalid coordinates yield null. Preserve existing `parseLocation` behavior for lat/lng consumers.
 - `src/services/ChargeControl.ts`: solar-aware charging logic with Fleet API throttling.
 - `src/services/TeslaFleetApi.ts`: OAuth/token lifecycle + vehicle commands.
 - `src/services/EmailService.ts`: standalone Nodemailer helper, currently unused by the entrypoint; see credential limitation above.
@@ -146,6 +147,7 @@ Keep environment secrets private, prefer deterministic commands, and document an
 - Use `isInTimeWindow` for charge windows; do not reinvent timezone math.
 
 ## DOCKER & DEPLOYMENT
+- OSRM Compose caps preparation memory at `1g` (`OSRM_PREPARE_MEMORY_LIMIT`) and serving at `512m` (`OSRM_MEMORY_LIMIT`), with no additional swap allowance. These caps may cause OOM on Thailand data; prepare on a larger host if needed and measure runtime needs. See README.
 - Base images: Node 20 Alpine for x86/ARM; keep dependency parity when adding OS packages.
 - Production containers should run `node dist/src/index.js`; never rely on `ts-node` in final images.
 - Compose binds `./data/token.json`; if you restructure secrets, update `docker-compose.yml` and this file.

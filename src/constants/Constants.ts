@@ -17,6 +17,9 @@ if (fs.existsSync(envLocalPath)) {
 }
 
 const AppConfig = {
+  OSRM_URL: process.env.OSRM_URL || 'http://localhost:3002',
+  OSRM_TIMEOUT_MS: Number(process.env.OSRM_TIMEOUT_MS || 2000),
+  OSRM_MAX_SNAP_DISTANCE_METERS: Number(process.env.OSRM_MAX_SNAP_DISTANCE_METERS || 200),
   SOCKET_IO_URL: process.env.SOCKET_IO_URL,
   SOCKET_IO_EVENT: process.env.SOCKET_IO_EVENT,
 

@@ -1,0 +1,35 @@
+services:
+  map-prepare:
+    image: ${OSRM_IMAGE:-ghcr.io/project-osrm/osrm-backend:latest}
+    mem_limit: ${OSRM_PREPARE_MEMORY_LIMIT:-1g}
+    memswap_limit: ${OSRM_PREPARE_MEMORY_LIMIT:-1g}
+    entrypoint: ['/bin/sh', '-ec']
+    command:
+      - |
+        if [ ! -s /data/${OSRM_MAP_NAME:-thailand-latest}.osm.pbf ]; then
+          echo 'Place ${OSRM_MAP_NAME:-thailand-latest}.osm.pbf in OSRM_DATA_DIR before starting.' >&2
+          exit 1
+        fi
+        if [ ! -f /data/${OSRM_MAP_NAME:-thailand-latest}.ready ]; then
+          osrm-extract -t 2 -p /opt/car.lua /data/${OSRM_MAP_NAME:-thailand-latest}.osm.pbf
+          osrm-partition -t 2 /data/${OSRM_MAP_NAME:-thailand-latest}.osrm
+          osrm-customize -t 2 /data/${OSRM_MAP_NAME:-thailand-latest}.osrm
+          touch /data/${OSRM_MAP_NAME:-thailand-latest}.ready
+        fi
+    volumes:
+      - ${OSRM_DATA_DIR:-./data/osrm-bangkok}:/data
+    restart: 'no'
+
+  osrm:
+    image: ${OSRM_IMAGE:-ghcr.io/project-osrm/osrm-backend:latest}
+    mem_limit: ${OSRM_MEMORY_LIMIT:-512m}
+    memswap_limit: ${OSRM_MEMORY_LIMIT:-512m}
+    command: ['osrm-routed', '--algorithm', 'mld', '/data/${OSRM_MAP_NAME:-thailand-latest}.osrm']
+    depends_on:
+      map-prepare:
+        condition: service_completed_successfully
+    ports:
+      - '${OSRM_PORT:-3002}:5000'
+    volumes:
+      - ${OSRM_DATA_DIR:-./data/osrm-bangkok}:/data:ro
+    restart: unless-stopped

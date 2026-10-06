@@ -83,6 +83,44 @@ const getDistanceFromHomeKm = (lat?: number, lng?: number): number | null => {
   return getDistanceKm({ lat, lon: lng }, { lat: homeLat, lon: homeLon });
 };
 
+const getPreferredDistanceFromHomeKm = async (lat?: number, lng?: number): Promise<number | null> => {
+  const fallback = getDistanceFromHomeKm(lat, lng);
+  if (fallback === null) return null;
+  const [homeLat, homeLon] = AppConfig.HOME_LOCATION!.split(',').map(Number);
+  const radius = AppConfig.OSRM_MAX_SNAP_DISTANCE_METERS;
+  const timeout = AppConfig.OSRM_TIMEOUT_MS;
+  if (!Number.isFinite(radius) || radius <= 0 || !Number.isFinite(timeout) || timeout <= 0) {
+    console.warn('Invalid OSRM settings; using straight-line distance');
+    return fallback;
+  }
+
+  try {
+    const baseUrl = AppConfig.OSRM_URL.replace(/\/+$/, '');
+    const response = await axios.get<{
+      code?: string;
+      routes?: { distance?: number }[];
+      waypoints?: { distance?: number }[];
+    }>(`${baseUrl}/route/v1/driving/${lng},${lat};${homeLon},${homeLat}`, {
+      timeout,
+      params: { overview: false, radiuses: `${radius};${radius}` },
+    });
+    const { code, routes, waypoints } = response.data;
+    const distance = routes?.[0]?.distance;
+    // Limit snapping: a regional map must not pull distant coordinates onto its edge.
+    if (code === 'Ok' && typeof distance === 'number' && Number.isFinite(distance)
+      && distance >= 0 && waypoints?.length === 2
+      && waypoints.every(point => typeof point.distance === 'number'
+        && Number.isFinite(point.distance) && point.distance >= 0 && point.distance <= radius)) {
+      return distance / 1000;
+    }
+    console.warn('OSRM returned no usable route; using straight-line distance');
+  } catch (error: unknown) {
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    console.warn(`OSRM request failed${status ? ` (HTTP ${status})` : ''}; using straight-line distance`);
+  }
+  return fallback;
+};
+
 const getModelName = (document: Document): string => {
   const modelElement = document.querySelector('.media-content .subtitle');
   return modelElement?.textContent?.replace(/\s+/g, ' ').trim() || '';
@@ -198,7 +236,10 @@ const getTeslaMateInfo = async (): Promise<TeslaMateResponse | null> => {
     });
 
     const dom = new JSDOM(res.data);
-    return parseTeslaMateHtml(dom);
+    const tesla = parseTeslaMateHtml(dom);
+    const distance = await getPreferredDistanceFromHomeKm(tesla.lat, tesla.lng);
+    tesla.distanceFromHomeKm = distance === null ? null : Number(distance.toFixed(3));
+    return tesla;
   } catch (err) {
     console.error(err);
     return null;

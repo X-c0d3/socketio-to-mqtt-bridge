@@ -4,3 +4,5 @@ dist
 .env.local
 .DS_Store
 token.json
+data/osrm/
+data/osrm-bangkok/

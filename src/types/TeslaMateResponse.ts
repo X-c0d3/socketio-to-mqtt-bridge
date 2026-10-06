@@ -23,7 +23,7 @@ export interface TeslaMateResponse {
   isCharging: boolean;
   lat?: number;
   lng?: number;
-  distanceFromHomeKm: number | null; // Straight-line distance; null when coordinates are unavailable.
+  distanceFromHomeKm: number | null; // OSRM road distance, with straight-line fallback; null for invalid coordinates.
 
   version: string;
   lastUpdate: string;
