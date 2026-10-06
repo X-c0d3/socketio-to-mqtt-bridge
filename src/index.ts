@@ -112,7 +112,8 @@ socket.on(AppConfig.SOCKET_IO_EVENT || '', async (data: any) => {
   if (deviceKey === 'LVTOPSUN_BATTERY') {
     batteryDischargePower = 0;
     const today = new Date().toDateString();
-    if (sensorData.deviceState.isDischarging) {
+    // need to add SOC in condition when battery less than 90%
+    if (sensorData.deviceState.isDischarging && sensorData.deviceState.soc < 90) {
       batteryDischargePower = sensorData.deviceState.isDischarging ? Math.abs(sensorData.deviceState.energy) : 0;
     }
 

@@ -54,7 +54,7 @@ const getDefaultMinAmps = (): number => {
     timeZone: 'Asia/Bangkok',
     weekday: 'short'
   });
-  // TOU Saturday and Sunday, set default min amps to 20A
+  // TOU Saturday and Sunday, set default min amps to 10A
   return day === 'Sat' || day === 'Sun' ? 10 : 5;
 };
 
